@@ -1,0 +1,32 @@
+{
+	"monster": [
+		{
+			"id"  : 8,
+			"name": "綠色史萊姆",
+			"path": "8",
+			"hp"  :	10,
+			"atk" : 12,
+			"dfs" : 2,
+			"agility": 1,
+			"dex": 1,
+			"money": 1,
+			"atk_type": 0,
+			"sound": "hit",
+			"img": "hit"
+		},
+		{
+			"id"  : 9,
+			"name": "紅色史萊姆",
+			"path": "9",
+			"hp"  :	120,
+			"atk" : 35,
+			"dfs" : 0,
+			"dex" : 1,
+			"agility": 1,
+			"money": 1,
+			"atk_type": 4,
+			"sound": "hit",
+			"img": "hit"
+		}
+	]
+}
