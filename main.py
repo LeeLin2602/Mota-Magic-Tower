@@ -20,21 +20,17 @@ class o_type(Enum):
 	barrier = 7
 
 	item = 8
-
-
 class d_type(Enum):
 	yellow = 0
 	blue   = 1
 	red    = 2
 	magic  = 3
-
 class atk_type(Enum):
 	physic = 0
 	magic  = 1
 	poisonous = 2
 	double = 3
 	triple = 4
-
 class npc_type(Enum):
 	fairy	 = 0
 	trader   = 1
@@ -46,8 +42,7 @@ icons = {
 	"npc_1" : "resources/NPC/老人 0.png",
 	"npc_2" : "resources/NPC/商人 0.png",
 	"npc_3" : "resources/NPC/盜賊 0.png",
-	"player": "resources/勇者/down 0.png"
-}
+	"player": "resources/勇者/down 0.png"}
 
 monsters = {}
 monster = json.load(open("data/monsters_data.json"))
@@ -58,22 +53,10 @@ for i in monster['monster']:
 
 parameter = {'highest_floor': 0,'this_floor': 0, 'lower_floor': 0}
 
-parameter['ever_gone']  = {1}
-parameter['level'] 		= 1
-parameter['health'] 	= 1000
-parameter['attack'] 	= 90
-parameter['defence'] 	= 10
-parameter['agility'] 	= 1
-parameter['money'] 		= 0
-
-parameter['0_key']  = 1
-parameter['1_key']  = 1
-parameter['2_key']  = 1
-
-parameter['sword']  = 52
-parameter['shield']  = -1
-
-parameter['is_poisoning'] = False
+parameter['ever_gone'] = {1}; parameter['level'] = 1; parameter['health'] = 1000
+parameter['attack'] = 90; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 0
+parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
+parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
 
 class text_object():
 	def __init__(self, screen, text, location):
