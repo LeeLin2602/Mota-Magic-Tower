@@ -13,8 +13,7 @@ class o_type(Enum):
 	monster = 2
 	npc 	= 3
 
-	up_floor 	= 4
-	down_floor 	= 5
+	floor 	= 4
 
 	door = 6
 	barrier = 7
@@ -495,21 +494,10 @@ class floor():
 		self.config = data['config']
 		self.this_floor = data['floor']
 
-		if "can_fly" in data["scene"]:
-			self.can_fly = data["can_fly"]
-		else:
-			self.can_fly = True
-
-		if "record" in data["record"]:
-			self.record = data["record"]
-		else:
-			self.record = True
-
 		self.objects 	= []
-		self.up_floor   = (0, 0)
-		self.down_floor = (0, 0)
 
 		self.tags = {}
+		self.floors = {}
 
 		for i in range(1,14):
 			for j in range(1,14):
@@ -522,15 +510,9 @@ class floor():
 				elif self.scene[i - 1][j - 1] == 3:
 					self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
 
-				elif self.scene[i - 1][j - 1] == 4:
-					self.down_floor = (j, i)
-					if not data['config']['prev_floor'] == None:
-						self.objects.append(object(screen, "resources/地形/down_floor.png", j, i, o_type = o_type.down_floor))
-
-				elif self.scene[i - 1][j - 1] == 5:
-					self.up_floor = (j, i)
-					if not data['config']['next_floor'] == None:
-						self.objects.append(object(screen, "resources/地形/up_floor.png", j, i, o_type = o_type.up_floor))
+				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == 4:
+					self.floors[(j, i)] = (self.scene[i - 1][j - 1]['goto'], self.scene[i - 1][j - 1]['location'])
+					self.objects.append(object(screen, "resources/地形/" + str(self.scene[i - 1][j - 1]['img']) + ".png", j, i, o_type = o_type.floor))
 
 				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == o_type.npc.value:
 					module = __import__("scripts." + self.scene[i - 1][j - 1]['program'])
@@ -677,11 +659,9 @@ class player(object):
 
 		for i in objs:
 			if i.valid and i.location == [self.location[0] + self.vector[0], self.location[1] + self.vector[1]]:
-				if i.o_type == o_type.up_floor:
-					jump(self.screen, this_floor.config['next_floor'])
-					return
-				elif i.o_type == o_type.down_floor:
-					jump(self.screen, this_floor.config['prev_floor'])
+				if i.o_type == o_type.floor:
+					t = this_floor.floors[(self.location[0] + self.vector[0], self.location[1] + self.vector[1])]
+					jump(self.screen, t[0], t[1])
 					return
 				if not i.trigger():
 					return
@@ -697,29 +677,16 @@ class player(object):
 			
 
 
-def jump(screen, destination):
+def jump(screen, destination, location):
 	global warrior, parameter, this_floor
 	warrior.vector = [0, 0, warrior.vector[2]]
 
-	parameter['ever_gone'].add(destination)
+	if (not "record" in floors[destination].config) or floors[destination].config['record']:
+		parameter['ever_gone'].add(destination)
 
-	if destination > parameter['highest_floor']:
-		parameter['highest_floor'] = destination
 		floors[parameter["this_floor"]] = this_floor
 		this_floor = floors[destination]
-		warrior.location = this_floor.down_floor
-	elif destination < parameter['lower_floor']:
-		parameter['lower_floor'] = destination
-		floors[parameter["this_floor"]] = this_floor
-		this_floor = floors[destination]
-		warrior.location = this_floor.up_floor
-	else:
-		floors[parameter["this_floor"]] = this_floor
-		this_floor = floors[destination]
-		if destination < parameter["this_floor"]:
-			warrior.location = this_floor.up_floor
-		else:
-			warrior.location = this_floor.down_floor
+		warrior.location = location
 
 	warrior.location = list(warrior.location)
 	parameter["this_floor"] = destination
