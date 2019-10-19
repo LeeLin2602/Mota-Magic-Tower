@@ -58,6 +58,7 @@ for i in monster['monster']:
 
 parameter = {'highest_floor': 0,'this_floor': 0, 'lower_floor': 0}
 
+parameter['ever_gone']  = {1}
 parameter['level'] 		= 1
 parameter['health'] 	= 1000
 parameter['attack'] 	= 90
@@ -93,26 +94,6 @@ class tools():
 		objects.append(object(self.screen, "resources/字/fgt_box.png", 13, 13, o_type = o_type.scene, multiple = 1))
 
 		now = this_floor.this_floor
-
-		while True:
-			for event in pygame.event.get():
-				if event.type == pygame.QUIT:
-					sys.exit()
-				if event.type == pygame.KEYDOWN:
-					if event.key == pygame.K_KP_ENTER:
-						jump(self.screen, now)
-						break
-					elif event.key == pygame.K_UP:
-						if now < parameter['highest_floor']:
-							now += 1
-					elif event.key == pygame.K_DOWN:
-						if now > parameter['lower_floor']:
-							now -= 1
-
-					
-
-				update_screen(screen, grounds + information + scenes + [this_floor, warrior] + conversation_control.objects)
-				time.sleep(0.075)
 
 	def illustration(self):
 		pass
@@ -530,6 +511,17 @@ class floor():
 		self.scene = data["scene"]
 		self.config = data['config']
 		self.this_floor = data['floor']
+
+		if "can_fly" in data["scene"]:
+			self.can_fly = data["can_fly"]
+		else:
+			self.can_fly = True
+
+		if "record" in data["record"]:
+			self.record = data["record"]
+		else:
+			self.record = True
+
 		self.objects 	= []
 		self.up_floor   = (0, 0)
 		self.down_floor = (0, 0)
@@ -725,6 +717,8 @@ class player(object):
 def jump(screen, destination):
 	global warrior, parameter, this_floor
 	warrior.vector = [0, 0, warrior.vector[2]]
+
+	parameter['ever_gone'].add(destination)
 
 	if destination > parameter['highest_floor']:
 		parameter['highest_floor'] = destination
