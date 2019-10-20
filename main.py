@@ -14,6 +14,7 @@ class o_type(Enum):
 	npc 	= 3
 
 	floor 	= 4
+	trigger = 5
 
 	door = 6
 	barrier = 7
@@ -24,6 +25,7 @@ class d_type(Enum):
 	blue   = 1
 	red    = 2
 	magic  = 3
+	fence  = 4
 class atk_type(Enum):
 	physic = 0
 	magic  = 1
@@ -53,7 +55,7 @@ for i in monster['monster']:
 parameter = {'highest_floor': 0,'this_floor': 0, 'lower_floor': 0}
 
 parameter['ever_gone'] = {1}; parameter['level'] = 1; parameter['health'] = 1000
-parameter['attack'] = 90; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 0
+parameter['attack'] = 900; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 200
 parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
 parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
 
@@ -350,6 +352,7 @@ class object():
 				self.rect = self.image.get_rect()
 		else:
 			self.visible = False
+			self.valid   = True
 
 		self.o_type = o_type
 
@@ -442,15 +445,38 @@ class npc(object):
 	def cost(self, item, amount):
 		return cost(item, amount)
 
+class game_trigger(object):
+	def trigger(self):
+		self.script.status = self
+		if self.script != None:
+			t = self.script.trigger(self.script)
+			if t == False:
+				return False
+		return True
+	def cost(self, item, amount):
+		return cost(item, amount)
+
 class door(object):
 	def init2(self, parameter):
 		self.d_type = parameter['d_type']
 		self.parameter = parameter
 		self.is_open = False
 		self.count   = 0
+	def close(self):
+
+		self.is_open = False
+		self.visible = True
+		self.count   = 0
+
+		path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " 0.png"
+		self.image = pygame.image.load(path)
+		self.rect = self.image.get_rect()
+		self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
+		self.rect = self.image.get_rect()
+
 	def trigger(self):
 		if not self.is_open:
-			if not self.d_type == 3:
+			if not self.d_type >= 3:
 				if cost(str(self.d_type) + "_key", 1):
 					self.is_open = True
 					play_audio("open_door")
@@ -477,7 +503,7 @@ class door(object):
 			if self.count == 4:
 				self.visible = False
 				return
-			path = "resources/地形/門/" + ["黃","藍","紅","魔法"][self.d_type] + " %s.png" % self.count
+			path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " %s.png" % self.count
 			self.image = pygame.image.load(path)
 			self.rect = self.image.get_rect()
 			self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
@@ -501,58 +527,71 @@ class floor():
 
 		for i in range(1,14):
 			for j in range(1,14):
-				if self.scene[i - 1][j - 1] == 1:
-					self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
+				if type(self.scene[i - 1][j - 1]) == list:
+					scene_datas = self.scene[i - 1][j - 1]
+				else:
+					scene_datas = [self.scene[i - 1][j - 1]]
+				for scene_data in scene_datas:
+					if scene_data == 1:
+						self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
 
-				elif self.scene[i - 1][j - 1] == 2:
-					self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
+					elif scene_data == 2:
+						self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
 
-				elif self.scene[i - 1][j - 1] == 3:
-					self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
+					elif scene_data == 3:
+						self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
 
-				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == 4:
-					self.floors[(j, i)] = (self.scene[i - 1][j - 1]['goto'], self.scene[i - 1][j - 1]['location'])
-					self.objects.append(object(screen, "resources/地形/" + str(self.scene[i - 1][j - 1]['img']) + ".png", j, i, o_type = o_type.floor))
+					elif type(scene_data) == dict and scene_data['o_type'] == 4:
+						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
+						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
 
-				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == o_type.npc.value:
-					module = __import__("scripts." + self.scene[i - 1][j - 1]['program'])
-					exec("global NPC; NPC = module." + self.scene[i - 1][j - 1]['program'] + ".NPC")
-					path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][self.scene[i - 1][j - 1]["npc_type"]] + " %s.png"
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
+						module = __import__("scripts." + scene_data['program'])
+						exec("global NPC; NPC = module." + scene_data['program'] + ".NPC")
+						path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
 
-					self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = self.scene[i - 1][j - 1], script = NPC))
+						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
 
-				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == o_type.monster.value:
-					module = __import__("scripts." + self.scene[i - 1][j - 1]['program'])
-					exec("global MST; MST = module." + self.scene[i - 1][j - 1]['program'] + ".monster;")
-					path = "resources/怪物/" + str(self.scene[i - 1][j - 1]["m_type"] - 2000) + ",%s.png"
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
+						module = __import__("scripts." + scene_data['program'])
+						exec("global MST; MST = module." + scene_data['program'] + ".monster;")
+						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
 
-					self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": self.scene[i - 1][j - 1]["m_type"] - 2000}, script = MST))
+						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
+					
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
+						module = __import__("scripts." + scene_data['program'])
+						exec("global trigger; trigger = module." + scene_data['program'] + ".trigger;")
+						path = scene_data['img'] if 'img' in scene_data else ''
 
-				elif type(self.scene[i - 1][j - 1]) == dict and self.scene[i - 1][j - 1]['o_type'] == o_type.door.value:
-					if 'program' in self.scene[i - 1][j - 1]:
-						module = __import__("scripts." + self.scene[i - 1][j - 1]['program'])
-						exec("global DR; DR = module." + self.scene[i - 1][j - 1]['program'] + ".monster")
-					else:
-						DR = None
-					path = "resources/地形/門/" + ["黃","藍","紅","魔法"][self.scene[i - 1][j - 1]["d_type"]] + " 0.png"
+						self.objects.append(game_trigger(screen, path , j, i, o_type = o_type.trigger, script = trigger))
+			
 
-					self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = self.scene[i - 1][j - 1] , script = DR))
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.door.value:
+						if 'program' in scene_data:
+							module = __import__("scripts." + scene_data['program'])
+							exec("global DR; DR = module." + scene_data['program'] + ".monster")
+						else:
+							DR = None
+						path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][scene_data["d_type"]] + " 0.png"
 
-					if 'tag' in self.scene[i - 1][j - 1]:
-						self.tags[self.scene[i - 1][j - 1]['tag']] = self.objects[-1]
+						self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = scene_data , script = DR))
 
-				elif 62 >= self.scene[i - 1][j - 1] >= 60:
-					self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][self.scene[i - 1][j - 1] - 60]), j, i, o_type = o_type.door, arg = {"d_type": self.scene[i - 1][j - 1] - 60}))
-				
-				elif 71 >= self.scene[i - 1][j - 1] >= 70:
-					self.objects.append(object(screen, "resources/地形/" + (["lava","star"][self.scene[i - 1][j - 1] - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
-				
-				elif 900 > self.scene[i - 1][j - 1] >= 800:
-					self.objects.append(item(screen, "resources/道具/%s.pdng" % str(self.scene[i - 1][j - 1] - 800), j, i, o_type = o_type.item, arg = {'i_type': self.scene[i - 1][j - 1] - 800}))
-				elif self.scene[i - 1][j - 1] >= 2000:
-					self.objects.append(monster(screen, "resources/怪物/" + str(self.scene[i - 1][j - 1] % 1000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': self.scene[i - 1][j - 1] % 1000}))
+					elif 62 >= scene_data >= 60:
+						self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][scene_data - 60]), j, i, o_type = o_type.door, arg = {"d_type": scene_data - 60}))
+					
+					elif 71 >= scene_data >= 70:
+						self.objects.append(object(screen, "resources/地形/" + (["lava","star"][scene_data - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
+					
+					elif 2000 > scene_data >= 1000:
+						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
+					elif scene_data >= 2000:
+						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
 
-				self.objects[-1].floor = self
+					if type(scene_data) == dict and 'tag' in scene_data:
+							self.tags[scene_data['tag']] = self.objects[-1]
+
+					self.objects[-1].floor = self
 				
 	def blitme(self):
 		for i in self.objects:
@@ -565,62 +604,84 @@ class item(object):
 	def trigger(self):
 		if self.i_type == 0:
 			parameter['attack'] += 2
+			play_audio("error")
 		if self.i_type == 1:
 			parameter['defence'] += 2
+			play_audio("error")
 		if self.i_type == 2:
 			parameter['agility'] += 1
+			play_audio("error")
 		if self.i_type == 4:
 			parameter['health'] += 200
+			play_audio("get")
 		if self.i_type == 5:
 			parameter['health'] += 400
+			play_audio("get")
 		if self.i_type == 15: 
 			parameter['health'] *= 2
+			play_audio("get")
 		if self.i_type == 16:
 			parameter['0_key'] += 1
+			play_audio("error")
 		if self.i_type == 17:
 			parameter['1_key'] += 1
+			play_audio("error")
 		if self.i_type == 18:
 			parameter['2_key'] += 1
+			play_audio("error")
 		if self.i_type == 19:
 			parameter['0_key'] += 1
 			parameter['1_key'] += 1
 			parameter['2_key'] += 1
+			play_audio("error")
 		if self.i_type == 31:
 			parameter['money'] += 300
+			play_audio("money")
 		if self.i_type == 36:
 			parameter['level'] += 1
 			parameter['attack'] += 5
 			parameter['defence'] += 3
+			play_audio("get")
 		if self.i_type == 48:
 			parameter['attack'] += 10
 			parameter['sword'] = max(48, parameter['sword'])
+			play_audio("error")
 		if self.i_type == 49:
 			parameter['attack'] += 28
 			parameter['sword'] = max(49, parameter['sword'])
+			play_audio("error")
 		if self.i_type == 50:
 			parameter['attack'] += 40
 			parameter['sword'] = max(50, parameter['sword'])
+			play_audio("error")
 		if self.i_type == 51:
 			parameter['attack'] += 65
 			parameter['sword'] = max(51, parameter['sword'])
+			play_audio("error")
 		if self.i_type == 52:
 			parameter['attack'] += 80
 			parameter['sword'] = max(52, parameter['sword'])
+			play_audio("error")
 		if self.i_type == 56:
 			parameter['defence'] += 12
 			parameter['shield'] = max(56, parameter['shield'])
+			play_audio("error")
 		if self.i_type == 57:
 			parameter['defence'] += 30
 			parameter['shield'] = max(57, parameter['shield'])
+			play_audio("error")
 		if self.i_type == 58:
 			parameter['defence'] += 42
 			parameter['shield'] = max(58, parameter['shield'])
+			play_audio("error")
 		if self.i_type == 59:
 			parameter['defence'] += 68
 			parameter['shield'] = max(59, parameter['shield'])
+			play_audio("error")
 		if self.i_type == 60:
 			parameter['defence'] += 85
 			parameter['shield'] = max(60, parameter['shield'])
+			play_audio("error")
 		self.valid = False
 		self.visible = False
 		return True
