@@ -86,8 +86,8 @@ class tools():
 		for i in this_floor.objects:
 			if i.o_type == o_type.monster:
 				monster = (i.property['name'], i.property['path'], i.property['hp'], i.property['atk'], i.property['dfs'], i.property['money'], i.property['info'])
-				#if not monster in monsters:
-				monsters.append(monster)
+				if not monster in monsters:
+					monsters.append(monster)
 		
 		monsters.sort(key = lambda x: int(x[1]))
 
