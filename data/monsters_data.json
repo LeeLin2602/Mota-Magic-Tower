@@ -12,21 +12,23 @@
 			"money": 1,
 			"atk_type": 0,
 			"sound": "hit",
-			"img": "hit"
+			"img": "hit",
+			"info": "無"
 		},
 		{
 			"id"  : 9,
 			"name": "紅色史萊姆",
 			"path": "9",
-			"hp"  :	120,
+			"hp"  :	40,
 			"atk" : 35,
 			"dfs" : 0,
 			"dex" : 1,
 			"agility": 1,
-			"money": 1,
-			"atk_type": 4,
+			"money": 100,
+			"atk_type": 0,
 			"sound": "hit",
-			"img": "hit"
+			"img": "hit",
+			"info": "無"
 		}
 	]
 }

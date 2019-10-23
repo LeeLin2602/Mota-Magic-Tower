@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+
 import sys
 import pygame
 import time
@@ -32,6 +34,8 @@ class atk_type(Enum):
 	poisonous = 2
 	double = 3
 	triple = 4
+	bloodsuck = 5
+
 class npc_type(Enum):
 	fairy	 = 0
 	trader   = 1
@@ -46,18 +50,21 @@ icons = {
 	"player": "resources/勇者/down 0.png"}
 
 monsters = {}
-monster = json.load(open("data/monsters_data.json"))
+monster = json.load(open("data/monsters_data.json", encoding="utf-8"))
 floors = {}
 
 for i in monster['monster']:
 	monsters[i['id']] = i
 
-parameter = {'highest_floor': 0,'this_floor': 0, 'lower_floor': 0}
+variables = {}
+parameter = {'this_floor': 0}
 
-parameter['ever_gone'] = {1}; parameter['level'] = 1; parameter['health'] = 1000
-parameter['attack'] = 900; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 200
+parameter['teleport_points'] = set(); parameter['level'] = 1; parameter['health'] = 1000; parameter['attack_method'] = atk_type.physic;
+parameter['attack'] = 10; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 200; 
 parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
 parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
+parameter['tools'] = set()
+
 
 class text_object():
 	def __init__(self, screen, text, location):
@@ -71,17 +78,91 @@ class tools():
 	def __init__(self, screen):
 		self.screen = screen
 
-	def fly(self):
-		global this_floor, parameter
+	def showMonsterInfo(self):
+		global this_floor, parameter, floors, scenes, information
 
-		objects = []
-		objects.append(object(self.screen, "resources/字/fgt_box.png", 13, 13, o_type = o_type.scene, multiple = 1))
+		monsters = []
+
+		for i in this_floor.objects:
+			if i.o_type == o_type.monster:
+				monster = (i.property['name'], i.property['path'], i.property['hp'], i.property['atk'], i.property['dfs'], i.property['money'], i.property['info'])
+				#if not monster in monsters:
+				monsters.append(monster)
+		
+		monsters.sort(key = lambda x: int(x[1]))
+
+		# Drawing
+
+		gauss = lambda x: int(x) if float(int(x)) == float(x) else int(x) + 1
+		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 20)
+		
+		t = 0
+
+		while True:
+			this_scenes = []
+
+			for i in range(min(len(monsters) - t, 3)):
+				damage = 99999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4])) - 1)
+				this_scenes.append(object(self.screen, "resources/怪物/" + monsters[t + i][1] + ",0.png" , 3, 2.8 * i + 3.5, dynamic = False, o_type = o_type.scene, multiple = 2))
+				this_scenes.append(text_object(self.screen, font.render(monsters[t + i][0] , True , (255,255,255)), (3.5, 2.8 * i + 0.25)))
+				this_scenes.append(text_object(self.screen, font.render("HP: " + str(monsters[t + i][2]) , True , (255,255,255)), (3.5, 2.8 * i + 1)))
+				this_scenes.append(text_object(self.screen, font.render("ATK: " + str(monsters[t + i][3]) , True , (255,255,255)), (6, 2.8 * i + 1)))
+				this_scenes.append(text_object(self.screen, font.render("DFS: " + str(monsters[t + i][4]) , True , (255,255,255)), (8.5, 2.8 * i + 1)))
+				this_scenes.append(text_object(self.screen, font.render("Money: " + str(monsters[t + i][5]) , True , (255,255,255)), (3.5, 2.8 * i + 1.75)))
+				this_scenes.append(text_object(self.screen, font.render("Damage: " + str(damage), True , (255,255,255)), (8.5, 2.8 * i + 1.75)))
+				this_scenes.append(text_object(self.screen, font.render("(Q（或D） 退出； 左右鍵 翻頁)", True , (255,255,255)), (5.8, 11.2)))
+
+			for event in pygame.event.get():
+				if event.type == pygame.QUIT:
+					sys.exit()
+				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_LEFT or event.key:
+						t = max(t - 3, 0)
+					elif event.key == pygame.K_RIGHT or event.key:
+						if t <= len(monsters) - 3:
+							t += 3
+					if event.key == ord('q') or event.key == ord("d"):
+						return
+
+			self.screen.fill((0,0,0))
+			update_screen(self.screen, scenes + information + this_scenes)
+			time.sleep(0.0015)
+
+
+	def fly(self):
+		global this_floor, parameter, conversation_control, floors
 
 		now = this_floor.this_floor
+		
+		t = list(parameter['teleport_points'])
+		m = t.index(parameter['this_floor'])
 
-	def illustration(self):
-		pass
-
+		while True:
+			key = conversation_control.print_word("","你要去 " + str(t[m]) + " 樓",keys = [ord('w'), ord('s'),ord('q'),ord("f"), 32])
+			
+			if key == ord('w'):
+				if m + 1 <= len(t) - 1:
+					m += 1
+			elif key == ord("s"):
+				if m - 1 >= 0:
+					m -= 1
+			elif key == 32: # ASCII(SPACE) = 32
+				if t[m] >= parameter['this_floor']:
+					if "from_lower" in floors[t[m]].config:
+						jump(self.screen, t[m], floors[t[m]].config["from_lower"])
+					else:
+						conversation_control.print_word("","無法找到著陸點")
+				else:
+					if "from_upper" in floors[t[m]].config:
+						jump(self.screen, t[m], floors[t[m]].config["from_upper"])
+					elif "from_lower" in floors[t[m]].config:
+						jump(self.screen, t[m], floors[t[m]].config["from_lower"])
+					else:
+						conversation_control.print_word("","無法找到著陸點")
+				return
+			else:
+				return
+				
 class fight():
 	def __init__(self, screen):
 		self.screen = screen
@@ -95,7 +176,9 @@ class fight():
 		path, hp, atk, dfs, agl, name, money, attack_type, sound, dexterity, img = monster.property['path'], monster.property['hp'], monster.property['atk'], monster.property['dfs'], monster.property['agility'], monster.property['name'], monster.property['money'], monster.property['atk_type'], monster.property['sound'], monster.property['dex'], monster.property['img']
 		
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24)
+		font2 = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 18)
 		
+		add_hp = 0
 
 		i = 1
 		if attack_type == atk_type.double.value:
@@ -103,18 +186,24 @@ class fight():
 		elif attack_type == atk_type.triple.value:
 			i = 3
 
-		j = i
+		_attack_times = 1
+		if parameter['attack_method'] == atk_type.double: _attack_times = 2
+		if parameter['attack_method'] == atk_type.triple: _attack_times = 3
+
+		j = i; _attack_times_left = _attack_times
 
 		counter = 3
 		this_scenes = []
-		this_scenes.append(object(self.screen, "resources/字/fgt_box.png", 13, 13, o_type = o_type.scene, multiple = 1))
+		this_scenes.append(object(self.screen, "resources/字/fgt_box.png", 13, 14, o_type = o_type.scene, multiple = 1))
 		this_scenes.append(text_object(self.screen, font.render(str(name) , True , (255,255,255)), (2, 1.3)))
 		this_scenes.append(text_object(self.screen, font.render(str("勇者") , True , (255,255,255)), (9.5, 1.3)))
 		this_scenes.append(text_object(self.screen, font.render("ATK： " + str(atk) , True , (255,255,255)), (2, 5.2)))
 		this_scenes.append(text_object(self.screen, font.render("ATK： " + str(parameter['attack']) , True , (255,255,255)), (9, 5.2)))
 		this_scenes.append(text_object(self.screen, font.render("DFS： " + str(dfs) , True , (255,255,255)), (2, 5.9)))
 		this_scenes.append(text_object(self.screen, font.render("DFS： " + str(parameter['defence']) , True , (255,255,255)), (9, 5.9)))
-		
+		this_scenes.append(text_object(self.screen, font2.render("按下(Q)逃離戰鬥" , True , (255,255,255)), (9, 6.7)))
+		message_timer = 5
+
 		effects = []
 
 		while self.in_fighting and ((hp > 0 and parameter['health'] > 0) or (counter < 4 or 4 < counter < 9)):
@@ -128,12 +217,13 @@ class fight():
 				if event.type == pygame.QUIT:
 					sys.exit()
 				if event.type == pygame.KEYDOWN and event.key == ord("q"):
+					parameter['health'] = max(parameter['health'] - add_hp, 1)
 					self.quit()
 
 			if counter == 4:
 				if rnd() > (agl - parameter['agility'] / 3)/100:
 					if rnd() < (parameter['agility'] - agl / 3)/100:
-						hp -= max(parameter['attack'] - dfs, 0) * 2					
+						hpcost = max(parameter['attack'] - dfs, 0) * 2					
 						if parameter['sword'] != -1:
 							play_audio("critical_cut")
 							effects.append(effect(self.screen, "resources/攻擊/sword" + str(parameter['sword']) + " %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
@@ -142,19 +232,31 @@ class fight():
 							effects.append(effect(self.screen, "resources/攻擊/hit %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 
 					else:
-						hp -= max(parameter['attack'] - dfs, 0)			
+						hpcost = max(parameter['attack'] - dfs, 0)			
 						if parameter['sword'] != -1:
 							play_audio("cut")
 							effects.append(effect(self.screen, "resources/攻擊/sword" + str(parameter['sword']) + " %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 						else:
 							play_audio("hit")
 							effects.append(effect(self.screen, "resources/攻擊/hit %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
-
+					
+					hp -= hpcost
+						
+					if parameter["attack_method"] == atk_type.bloodsuck:
+						suckedBlood_amount += min(int(rnd() * 0.2 * hpcost * parameter['level'] / 10), hpcost * 0.8)
+						parameter['health'] += suckedBlood_amount
+						add_hp += suckedBlood_amount 
 
 					hp = max(hp, 0)
+
+					if _attack_times_left != 1:
+						counter = 0
+						_attack_times_left -= 1
+					else:
+						_attack_times_left = _attack_times
 				else:
 					play_audio("miss")
-			
+		
 			if counter == 9 and j >= 0:
 				if j == 0:
 					j = i
@@ -180,10 +282,14 @@ class fight():
 				else:
 					play_audio("miss")
 
+			if message_timer >= 0:
+				message_timer -= 1
+				if message_timer == -1:
+					del this_scenes[-1]
 			objects.append(text_object(self.screen, font.render("HP： " + str(hp) , True , (255,255,255)), (2, 4.5)))
 			objects.append(text_object(self.screen, font.render("HP： " + str(parameter['health']) , True , (255,255,255)), (9, 4.5)))
 
-			update_screen(self.screen, grounds + information + scenes + [warrior] + this_floor.objects + this_scenes + objects + effects)
+			update_screen(self.screen, grounds + scenes + information + [warrior] + this_floor.objects + this_scenes + objects + effects)
 
 			time.sleep(0.075)
 			counter += 1
@@ -227,11 +333,11 @@ class key_event():
 		self.screen = screen
 
 	def check_events(self, objs):
-		global warrior
+		global warrior, tools_system, this_floor,parameter
 		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
+			if event.type == pygame.QUIT:			# exit game
 				sys.exit()
-			if event.type == pygame.KEYDOWN:
+			if event.type == pygame.KEYDOWN:		# move control
 				if event.key == pygame.K_RIGHT:
 					warrior.vector = [1, 0, 0]
 				elif event.key == pygame.K_LEFT:
@@ -240,7 +346,16 @@ class key_event():
 					warrior.vector = [0, 1, 2]
 				elif event.key == pygame.K_UP:
 					warrior.vector = [0,-1, 3]
+
+				# tools control: 
+				
+				if event.key == ord("f") and 'teleportation' in parameter['tools'] and this_floor.config['allow_teleport_out']:
+					tools_system.fly()
+				if event.key == ord("d") and 'monsterPedia' in parameter['tools']:
+					tools_system.showMonsterInfo()
+
 			elif event.type == pygame.KEYUP:
+
 				if event.key == pygame.K_RIGHT:
 					warrior.vector = [0, warrior.vector[1], warrior.vector[2]]
 				elif event.key == pygame.K_LEFT:
@@ -249,10 +364,11 @@ class key_event():
 					warrior.vector = [warrior.vector[0], 0, warrior.vector[2]]
 				elif event.key == pygame.K_UP:
 					warrior.vector = [warrior.vector[0], 0, warrior.vector[2]]
+		
 		warrior.move(objs)
 
 	def in_conversation(self, keys):
-		global this_floor, grounds, information, scenes,warrior
+		global this_floor, grounds, information, scenes, warrior
 		global conversation_control
 		while conversation_control.in_conversation:
 			for event in pygame.event.get():
@@ -264,8 +380,9 @@ class key_event():
 						return event.key
 					elif event.key in keys:
 						conversation_control.end_conversation()
+						play_audio("error")
 						return event.key
-			update_screen(self.screen, grounds + information + scenes + [warrior] + this_floor.objects + conversation_control.objects)
+			update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
 			time.sleep(0.075)
 
 
@@ -287,7 +404,10 @@ class conversation():
 		self.objects.append(object(self.screen, "resources/字/msg_box.png", 13, 15, o_type = o_type.scene, multiple = 1))
 
 		if path != "":
-			self.objects.append(object(self.screen, icons[path], 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
+			if path in icons:
+				self.objects.append(object(self.screen, icons[path], 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
+			else:
+				self.objects.append(object(self.screen, path, 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
 
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 32)
 		self.objects.append(text_object(self.screen, font.render(name , True , (255,255,255)), (2, 9.5)))
@@ -316,21 +436,33 @@ class conversation():
 		else:
 			self.objects = []
 
-def cost(item, amount):
+def cost(item, amount, voice = True):
 	if parameter[item] >= amount:
 		parameter[item] -= amount
-		if item == "money":
+		if voice and item == "money":
 			play_audio("gold")
 		else:
-			if amount > 0: 
+			if voice and amount > 0: 
 				play_audio("yes")
 		return True
-	print("error")
-	play_audio("error")
+
+	if voice: play_audio("error")
 	return False
 
 class object(): 
 	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None):
+		# RPG system
+
+		self.script = script
+
+		if script != None:
+			global conversation_control, variables
+
+			self.script.conversation_control = conversation_control
+			self.variables = variables
+			self.script.status = self
+
+		# Initialize on canvas and map
 		self.screen = screen
 
 		self.floor = floor
@@ -355,18 +487,15 @@ class object():
 			self.valid   = True
 
 		self.o_type = o_type
-
 		self.location = [x,y]
-
-		self.script = script
 
 		self.init2(arg)
 
-	def init2(self, arg):
+	def init2(self, arg): # Overwrite
 		pass
 
 	def trigger(self):
-		if self.o_type == o_type.wall:
+		if self.o_type == o_type.wall: 
 			return False
 		return True
 
@@ -384,6 +513,12 @@ class object():
 					self.counter = 0
 			else:
 				self.screen.blit(self.image, self.rect)
+
+	# RPG system
+
+	def cost(self, item, amount):
+		return cost(item, amount)
+
 
 class effect(object):
 	def blitme(self):
@@ -409,7 +544,6 @@ class monster(object):
 		self.property = monsters[arg["m_type"]]
 
 		if self.script != None:
-			self.script.status = self
 			self.script.__init__(self.script, arg)
 
 	def trigger(self):
@@ -425,13 +559,8 @@ class monster(object):
 
 class npc(object):
 	def init2(self, arg):
-		global conversation_control
-
-		self.script.conversation_control = conversation_control
-
 		self.name = arg["name"]
 		if self.script != None:
-			self.script.status = self
 			self.script.__init__(self.script, arg)
 
 	def trigger(self):
@@ -442,19 +571,14 @@ class npc(object):
 
 			self.script.trigger(self.script)
 			return False
-	def cost(self, item, amount):
-		return cost(item, amount)
 
 class game_trigger(object):
 	def trigger(self):
-		self.script.status = self
 		if self.script != None:
 			t = self.script.trigger(self.script)
 			if t == False:
 				return False
 		return True
-	def cost(self, item, amount):
-		return cost(item, amount)
 
 class door(object):
 	def init2(self, parameter):
@@ -462,8 +586,8 @@ class door(object):
 		self.parameter = parameter
 		self.is_open = False
 		self.count   = 0
-	def close(self):
 
+	def close(self):
 		self.is_open = False
 		self.visible = True
 		self.count   = 0
@@ -474,10 +598,19 @@ class door(object):
 		self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
 		self.rect = self.image.get_rect()
 
+		play_audio("close_door")
+
+	def open(self):
+		self.is_open = True
+		if self.d_type <= 3:
+			play_audio("open_door")
+		elif self.d_type == 4:
+			play_audio("open_door2")
+
 	def trigger(self):
 		if not self.is_open:
 			if not self.d_type >= 3:
-				if cost(str(self.d_type) + "_key", 1):
+				if cost(str(self.d_type) + "_key", 1, False):
 					self.is_open = True
 					play_audio("open_door")
 				return False
@@ -485,7 +618,10 @@ class door(object):
 				if self.script!=None:
 					if self.script.trigger():
 						self.is_open = True
-						play_audio("open_door")
+						if self.d_type == 3:
+							play_audio("open_door")
+						elif self.d_type == 4:
+							play_audio("open_door2")
 					return False
 				else:
 					return False
@@ -517,7 +653,15 @@ class door(object):
 class floor():
 	def __init__(self, screen, data):
 		self.scene = data["scene"]
-		self.config = data['config']
+
+		if 'config' in data:
+			self.config = data['config']
+		else:
+			self.config = {
+				"allow_teleport_to": true,
+				"allow_teleport_out": true
+			}
+
 		self.this_floor = data['floor']
 
 		self.objects 	= []
@@ -543,6 +687,13 @@ class floor():
 
 					elif type(scene_data) == dict and scene_data['o_type'] == 4:
 						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
+
+						if not "not_teleport" in scene_data:
+							if scene_data['goto'] > self.this_floor:
+								self.config['from_upper'] = (j, i)
+							else:
+								self.config["from_lower"] = (j, i)
+
 						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
 
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
@@ -602,6 +753,8 @@ class item(object):
 		self.i_type = arg['i_type']
 
 	def trigger(self):
+		global conversation_control
+
 		if self.i_type == 0:
 			parameter['attack'] += 2
 			play_audio("error")
@@ -634,9 +787,18 @@ class item(object):
 			parameter['1_key'] += 1
 			parameter['2_key'] += 1
 			play_audio("error")
+		if self.i_type == 28:
+			parameter['tools'].add("monsterPedia")
+			play_audio("get")
+			conversation_control.print_word("","- 得到怪物圖鑑，按下 <D> 查詢怪物訊息 -")
 		if self.i_type == 31:
 			parameter['money'] += 300
 			play_audio("money")
+		if self.i_type == 34:
+			parameter['tools'].add("teleportation")
+			play_audio("get")
+			conversation_control.print_word("","- 得到飛天羅盤，按下 <F> 進行樓層跳躍 -")
+			conversation_control.print_word("","- （W 上樓/S 下樓/Q（或F）） 放棄/Space 傳送） -")
 		if self.i_type == 36:
 			parameter['level'] += 1
 			parameter['attack'] += 5
@@ -742,8 +904,8 @@ def jump(screen, destination, location):
 	global warrior, parameter, this_floor
 	warrior.vector = [0, 0, warrior.vector[2]]
 
-	if (not "record" in floors[destination].config) or floors[destination].config['record']:
-		parameter['ever_gone'].add(destination)
+	if floors[destination].config['allow_teleport_to']:
+		parameter['teleport_points'].add(destination)
 
 		floors[parameter["this_floor"]] = this_floor
 		this_floor = floors[destination]
@@ -759,13 +921,13 @@ def produce_number(screen, number,x ,y):
 	return c
 
 def play_audio(path):
-	if pygame.mixer.music.get_busy():
-		pygame.mixer.music.stop()
+	global audio_player
 
-	audio_player = pygame.mixer.music
+	if audio_player.get_busy():
+		audio_player.stop()
+
 	audio_player.load("resources/音效/" + path + ".mp3")
 	audio_player.play()
-
 
 
 def update_screen(screen, objects):
@@ -778,13 +940,23 @@ def update_screen(screen, objects):
 pygame.init()
 
 screen  = pygame.display.set_mode((int(576 * 1.5 + 144), int(480 * 1.5)))
+audio_player = pygame.mixer.music
 
 conversation_control = conversation(screen)
 fight_system = fight(screen)
 key_system = key_event(screen)
+tools_system = tools(screen)
 
 grounds 	= []
 scenes 		= []
+
+
+for j in range(0,15):
+	for i in range(-5,0):
+		scenes.append(object(screen, "resources/地形/ground.png", i, j, o_type = o_type.ground))
+	for i in range(0,15):
+		grounds.append(object(screen, "resources/地形/ground.png", i, j, o_type = o_type.ground))
+
 
 for i in range(-6,0):
 	scenes.append(object(screen, "resources/地形/wall 3.png", i,  0, o_type = o_type.scene))
@@ -810,20 +982,16 @@ scenes.append(object(screen, "resources/道具/17.png", -4.5, 10.5, o_type = o_t
 scenes.append(object(screen, "resources/道具/18.png", -4.5, 11.5, o_type = o_type.scene))
 scenes.append(object(screen, "resources/道具/31.png", -4.6, 12.5, o_type = o_type.scene))
 
-
-for i in range(-6,15):
-	for j in range(0,15):
-		grounds.append(object(screen, "resources/地形/ground.png", i, j, o_type = o_type.ground))
-
 warrior = player(screen)
 pygame.display.set_caption("Mota")
 
-f = json.load(open("data/floors_data.json"))
+f = json.load(open("data/floors_data.json", encoding="utf-8"))
 
 for i in f['floors']:
 	floors[i['floor']] = floor(screen, i)
 
 this_floor = floors[f["start"]]
+parameter['teleport_points'].add(f['start'])
 
 warrior.location = list(f['location'])
 
@@ -842,6 +1010,7 @@ while True:
 		   produce_number(screen, str(parameter['1_key']), -3.5, 10) +
 		   produce_number(screen, str(parameter['2_key']), -3.5, 11) +
 		   produce_number(screen, str(parameter['money']), -3.5, 12))
+
 	if parameter['is_poisoning']:
 		information.append(text_object(screen, pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24).render(str("（中毒）") , True , (0,255,0)), (-4.1, -0.8)))
 	if parameter['sword'] != -1:
@@ -849,5 +1018,5 @@ while True:
 	if parameter['shield'] != -1:
 		information.append(object(screen, "resources/道具/%s.png" % parameter['shield'], -2.5, 8.25, o_type = o_type.scene))
 
-	update_screen(screen, grounds + information + scenes + [this_floor, warrior] + conversation_control.objects)
+	update_screen(screen, grounds + scenes + information + [this_floor, warrior] + conversation_control.objects)
 	time.sleep(0.075)
