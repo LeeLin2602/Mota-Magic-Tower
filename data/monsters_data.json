@@ -5,7 +5,7 @@
 			"name": "綠色史萊姆",
 			"path": "8",
 			"hp"  :	10,
-			"atk" : 12,
+			"atk" : 840,
 			"dfs" : 2,
 			"agility": 1,
 			"dex": 1,

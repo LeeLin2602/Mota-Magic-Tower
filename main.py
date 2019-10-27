@@ -688,7 +688,7 @@ class floor():
 					elif type(scene_data) == dict and scene_data['o_type'] == 4:
 						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
 
-						if not "not_teleport" in scene_data:
+						if not "allow_teleport_to" in scene_data:
 							if scene_data['goto'] > self.this_floor:
 								self.config['from_upper'] = (j, i)
 							else:
@@ -741,6 +741,10 @@ class floor():
 
 					if type(scene_data) == dict and 'tag' in scene_data:
 							self.tags[scene_data['tag']] = self.objects[-1]
+					if type(scene_data) == dict and 'valid' in scene_data:
+							self.objects[-1].valid = scene_data['valid']
+					if type(scene_data) == dict and 'visible' in scene_data:
+							self.objects[-1].visible = scene_data['visible']
 
 					self.objects[-1].floor = self
 				
