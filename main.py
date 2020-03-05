@@ -272,9 +272,13 @@ class fight():
 				if rnd() > (parameter['agility'] - dexterity / 3)/100:
 					if rnd() < (dexterity - parameter['agility'] / 3)/100:
 						parameter['health'] -= max(atk - parameter['defence'], 0) * 2
+						if attack_type = atk_type.bloodsuck:
+							hp += int(max(atk - parameter['defence'], 0) * 0.4 * rnd())
 						play_audio("critical_" + sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					else:
+						if attack_type = atk_type.bloodsuck:
+							hp += int(max(atk - parameter['defence'], 0) * 0.2 * rnd())
 						parameter['health'] -= max(atk - parameter['defence'], 0)
 						play_audio(sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
