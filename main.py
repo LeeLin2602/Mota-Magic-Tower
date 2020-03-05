@@ -84,8 +84,8 @@ class tools():
 		monsters = []
 
 		for i in this_floor.objects:
-			if i.o_type == o_type.monster:
-				monster = (i.property['name'], i.property['path'], i.property['hp'], i.property['atk'], i.property['dfs'], i.property['money'], i.property['info'])
+			if i.o_type == o_type.monster and i.valid:
+				monster = (i.property['name'], i.property['path'], i.property['hp'], i.property['atk'], i.property['dfs'], i.property['money'], i.property['atk_type'], i.property['info'])
 				if not monster in monsters:
 					monsters.append(monster)
 		
@@ -101,26 +101,40 @@ class tools():
 		while True:
 			this_scenes = []
 
-			for i in range(min(len(monsters) - t, 3)):
-				damage = 99999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4])) - 1)
-				this_scenes.append(object(self.screen, "resources/怪物/" + monsters[t + i][1] + ",0.png" , 3, 2.8 * i + 3.5, dynamic = False, o_type = o_type.scene, multiple = 2))
-				this_scenes.append(text_object(self.screen, font.render(monsters[t + i][0] , True , (255,255,255)), (3.5, 2.8 * i + 0.25)))
-				this_scenes.append(text_object(self.screen, font.render("HP: " + str(monsters[t + i][2]) , True , (255,255,255)), (3.5, 2.8 * i + 1)))
-				this_scenes.append(text_object(self.screen, font.render("ATK: " + str(monsters[t + i][3]) , True , (255,255,255)), (6, 2.8 * i + 1)))
-				this_scenes.append(text_object(self.screen, font.render("DFS: " + str(monsters[t + i][4]) , True , (255,255,255)), (8.5, 2.8 * i + 1)))
-				this_scenes.append(text_object(self.screen, font.render("Money: " + str(monsters[t + i][5]) , True , (255,255,255)), (3.5, 2.8 * i + 1.75)))
-				this_scenes.append(text_object(self.screen, font.render("Damage: " + str(damage), True , (255,255,255)), (8.5, 2.8 * i + 1.75)))
-				this_scenes.append(text_object(self.screen, font.render("(Q（或D） 退出； 左右鍵 翻頁)", True , (255,255,255)), (5.8, 11.2)))
+			for i in range(min(len(monsters) - t, 2)):
+				if i + t < len(monsters):
+					damage = 99999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4])) - 1)
+					
+					if monsters[t + i][6] == atk_type.double.value:
+						damage *= 2
+					elif monsters[t + i][6] == atk_type.double.triple:
+						damage *= 3
+
+					this_scenes.append(object(self.screen, "resources/怪物/" + monsters[t + i][1] + ",0.png" , 3, 5 * i + 3.5, dynamic = False, o_type = o_type.scene, multiple = 2))
+					this_scenes.append(text_object(self.screen, font.render(monsters[t + i][0] , True , (255,255,255)), (3.5, 5.2 * i + 0.25)))
+					this_scenes.append(text_object(self.screen, font.render("生命: " + str(monsters[t + i][2]) , True , (255,255,255)), (3.5, 5.2 * i + 1)))
+					this_scenes.append(text_object(self.screen, font.render("攻擊: " + str(monsters[t + i][3]) , True , (255,255,255)), (6, 5.2 * i + 1)))
+					this_scenes.append(text_object(self.screen, font.render("防禦: " + str(monsters[t + i][4]) , True , (255,255,255)), (8.5, 5.2 * i + 1)))
+					this_scenes.append(text_object(self.screen, font.render("金錢: " + str(monsters[t + i][5]) , True , (255,255,255)), (3.5, 5.2 * i + 1.75)))
+					this_scenes.append(text_object(self.screen, font.render("預估傷害: " + str(damage), True , (255,255,255)), (8.5, 5.2 * i + 1.75)))
+					if len(monsters[t + i][-1]) >= 13:
+						this_scenes.append(text_object(self.screen, font.render("介紹: ", True , (255,255,255)), (3.5, 5.2 * i + 2.5)))
+						for j in range(len(monsters[t + i][-1]) // 16 + 1):
+							this_scenes.append(text_object(self.screen, font.render(monsters[t + i][-1][j * 16: j * 16 + 16], True , (255,255,255)), (4.5, 5.2 * i + 0.6 * j + 3.3)))
+					else:
+						this_scenes.append(text_object(self.screen, font.render("介紹: " + monsters[t + i][-1], True , (255,255,255)), (3.5, 5.2 * i + 2.5)))
+
+			this_scenes.append(text_object(self.screen, font.render("(Q（或D） 退出； 左右鍵 翻頁)", True , (255,255,255)), (5.8, 11.2)))
 
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					sys.exit()
 				if event.type == pygame.KEYDOWN:
-					if event.key == pygame.K_LEFT or event.key:
-						t = max(t - 3, 0)
-					elif event.key == pygame.K_RIGHT or event.key:
-						if t <= len(monsters) - 3:
-							t += 3
+					if event.key == pygame.K_LEFT:
+						t = max(t - 2, 0)
+					elif event.key == pygame.K_RIGHT:
+						if t + 2 < len(monsters):
+							t += 2
 					if event.key == ord('q') or event.key == ord("d"):
 						return
 
@@ -206,12 +220,24 @@ class fight():
 
 		effects = []
 
+		offset_monster = offset_player = 0
+
 		while self.in_fighting and ((hp > 0 and parameter['health'] > 0) or (counter < 4 or 4 < counter < 9)):
 
 			objects = []
 
-			objects.append(object(self.screen, monster.path , 4, 6, dynamic = True, o_type = o_type.scene, multiple = 3))
-			objects.append(object(self.screen, icons['player'], 11, 6, o_type = o_type.scene, multiple = 3))
+			objects.append(object(self.screen, monster.path , 4 + offset_monster, 6, dynamic = True, o_type = o_type.scene, multiple = 3))
+			objects.append(object(self.screen, icons['player'], 11 + offset_player, 6, o_type = o_type.scene, multiple = 3))
+
+
+					
+			if offset_player > 0:
+				offset_player -= 0.3
+			else: offset_player = 0
+
+			if offset_monster > 0:
+				offset_monster -= 0.3
+			else: offset_monster = 0
 
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
@@ -221,8 +247,8 @@ class fight():
 					self.quit()
 
 			if counter == 4:
-				if rnd() > (agl - parameter['agility'] / 3)/100:
-					if rnd() < (parameter['agility'] - agl / 3)/100:
+				if rnd() > (agl - parameter['agility'])/110:
+					if rnd() < (parameter['agility'] - agl)/110:
 						hpcost = max(parameter['attack'] - dfs, 0) * 2					
 						if parameter['sword'] != -1:
 							play_audio("critical_cut")
@@ -256,7 +282,10 @@ class fight():
 						_attack_times_left = _attack_times
 				else:
 					play_audio("miss")
-		
+					offset_monster = 1.5
+					if parameter['sword'] != -1:
+						effects.append(effect(self.screen, "resources/攻擊/sword" + str(parameter['sword']) + " %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))			
+			
 			if counter == 9 and j >= 0:
 				if j == 0:
 					j = i
@@ -269,22 +298,26 @@ class fight():
 				if attack_type == atk_type.poisonous.value:
 					if rnd() < 0.2:
 						parameter['is_poisoning'] = True
-				if rnd() > (parameter['agility'] - dexterity / 3)/100:
-					if rnd() < (dexterity - parameter['agility'] / 3)/100:
+				if rnd() > (parameter['agility'] - agl)/110:
+					if rnd() < (dexterity - parameter['agility'])/110:
 						parameter['health'] -= max(atk - parameter['defence'], 0) * 2
-						if attack_type = atk_type.bloodsuck:
+						if attack_type == atk_type.bloodsuck.value:
 							hp += int(max(atk - parameter['defence'], 0) * 0.4 * rnd())
 						play_audio("critical_" + sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					else:
-						if attack_type = atk_type.bloodsuck:
+						if attack_type == atk_type.bloodsuck.value:
 							hp += int(max(atk - parameter['defence'], 0) * 0.2 * rnd())
 						parameter['health'] -= max(atk - parameter['defence'], 0)
 						play_audio(sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					parameter['health'] = max(parameter['health'], 0)
 				else:
+					offset_player = 1.5
 					play_audio("miss")
+					effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
+
+
 
 			if message_timer >= 0:
 				message_timer -= 1
