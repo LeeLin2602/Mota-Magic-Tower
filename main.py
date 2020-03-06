@@ -4,8 +4,11 @@ import sys
 import pygame
 import time
 import json
+
 from random import random as rnd
 from enum import Enum
+
+import data.items
 
 class o_type(Enum):
 	effect  = -2
@@ -388,8 +391,10 @@ class key_event():
 				
 				if event.key == ord("f") and 'teleportation' in parameter['tools'] and this_floor.config['allow_teleport_out']:
 					tools_system.fly()
+					pygame.event.clear()
 				if event.key == ord("d") and 'monsterPedia' in parameter['tools']:
 					tools_system.showMonsterInfo()
+					pygame.event.clear()
 
 			elif event.type == pygame.KEYUP:
 
@@ -414,9 +419,11 @@ class key_event():
 				if event.type == pygame.KEYDOWN:
 					if keys == []:
 						conversation_control.end_conversation()
+						pygame.event.clear()
 						return event.key
 					elif event.key in keys:
 						conversation_control.end_conversation()
+						pygame.event.clear()
 						play_audio("error")
 						return event.key
 			update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
@@ -794,97 +801,8 @@ class item(object):
 		self.i_type = arg['i_type']
 
 	def trigger(self):
-		global conversation_control
-
-		if self.i_type == 0:
-			parameter['attack'] += 2
-			play_audio("error")
-		if self.i_type == 1:
-			parameter['defence'] += 2
-			play_audio("error")
-		if self.i_type == 2:
-			parameter['agility'] += 1
-			play_audio("error")
-		if self.i_type == 4:
-			parameter['health'] += 200
-			play_audio("get")
-		if self.i_type == 5:
-			parameter['health'] += 400
-			play_audio("get")
-		if self.i_type == 15: 
-			parameter['health'] *= 2
-			play_audio("get")
-		if self.i_type == 16:
-			parameter['0_key'] += 1
-			play_audio("error")
-		if self.i_type == 17:
-			parameter['1_key'] += 1
-			play_audio("error")
-		if self.i_type == 18:
-			parameter['2_key'] += 1
-			play_audio("error")
-		if self.i_type == 19:
-			parameter['0_key'] += 1
-			parameter['1_key'] += 1
-			parameter['2_key'] += 1
-			play_audio("error")
-		if self.i_type == 28:
-			parameter['tools'].add("monsterPedia")
-			play_audio("get")
-			conversation_control.print_word("","- 得到怪物圖鑑，按下 <D> 查詢怪物訊息 -")
-		if self.i_type == 31:
-			parameter['money'] += 300
-			play_audio("money")
-		if self.i_type == 34:
-			parameter['tools'].add("teleportation")
-			play_audio("get")
-			conversation_control.print_word("","- 得到飛天羅盤，按下 <F> 進行樓層跳躍 -")
-			conversation_control.print_word("","- （W 上樓/S 下樓/Q（或F）） 放棄/Space 傳送） -")
-		if self.i_type == 36:
-			parameter['level'] += 1
-			parameter['attack'] += 5
-			parameter['defence'] += 3
-			play_audio("get")
-		if self.i_type == 48:
-			parameter['attack'] += 10
-			parameter['sword'] = max(48, parameter['sword'])
-			play_audio("error")
-		if self.i_type == 49:
-			parameter['attack'] += 28
-			parameter['sword'] = max(49, parameter['sword'])
-			play_audio("error")
-		if self.i_type == 50:
-			parameter['attack'] += 40
-			parameter['sword'] = max(50, parameter['sword'])
-			play_audio("error")
-		if self.i_type == 51:
-			parameter['attack'] += 65
-			parameter['sword'] = max(51, parameter['sword'])
-			play_audio("error")
-		if self.i_type == 52:
-			parameter['attack'] += 80
-			parameter['sword'] = max(52, parameter['sword'])
-			play_audio("error")
-		if self.i_type == 56:
-			parameter['defence'] += 12
-			parameter['shield'] = max(56, parameter['shield'])
-			play_audio("error")
-		if self.i_type == 57:
-			parameter['defence'] += 30
-			parameter['shield'] = max(57, parameter['shield'])
-			play_audio("error")
-		if self.i_type == 58:
-			parameter['defence'] += 42
-			parameter['shield'] = max(58, parameter['shield'])
-			play_audio("error")
-		if self.i_type == 59:
-			parameter['defence'] += 68
-			parameter['shield'] = max(59, parameter['shield'])
-			play_audio("error")
-		if self.i_type == 60:
-			parameter['defence'] += 85
-			parameter['shield'] = max(60, parameter['shield'])
-			play_audio("error")
+		global conversation_control, item_system
+		item_system.trigger(self.i_type)
 		self.valid = False
 		self.visible = False
 		return True
@@ -1037,6 +955,9 @@ parameter['teleport_points'].add(f['start'])
 warrior.location = list(f['location'])
 
 del f
+
+item_system = data.items.items(parameter, play_audio, conversation_control)
+
 
 while True:
 	if not conversation_control.in_conversation:
