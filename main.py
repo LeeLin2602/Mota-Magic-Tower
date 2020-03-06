@@ -10,6 +10,7 @@ from enum import Enum
 
 import data.items
 
+# types
 class o_type(Enum):
 	effect  = -2
 	scene 	= -1
@@ -38,7 +39,6 @@ class atk_type(Enum):
 	double = 3
 	triple = 4
 	bloodsuck = 5
-
 class npc_type(Enum):
 	fairy	 = 0
 	trader   = 1
@@ -63,20 +63,15 @@ variables = {}
 parameter = {'this_floor': 0}
 
 parameter['teleport_points'] = set(); parameter['level'] = 1; parameter['health'] = 1000; parameter['attack_method'] = atk_type.physic;
-parameter['attack'] = 10; parameter['defence'] = 10; parameter['agility'] = 1; parameter['money'] = 200; 
-parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
+#parameter['attack'] = 10; parameter['defence'] = 10; parameter['agility'] = 1
+parameter['attack'] = 300; parameter['defence'] = 10; parameter['agility'] = 30 # for test
+
+parameter['money'] = 200; parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
 parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
 parameter['tools'] = set()
 
 
-class text_object():
-	def __init__(self, screen, text, location):
-		self.text = text
-		self.location = location
-		self.screen = screen
-	def blitme(self):
-		self.screen.blit(self.text, (self.location[0] * 48 + 336, self.location[1] * 48 + 96))
-
+# game_system
 class tools():
 	def __init__(self, screen):
 		self.screen = screen
@@ -178,8 +173,7 @@ class tools():
 						conversation_control.print_word("","無法找到著陸點")
 				return
 			else:
-				return
-				
+				return		
 class fight():
 	def __init__(self, screen):
 		self.screen = screen
@@ -256,6 +250,7 @@ class fight():
 						if parameter['sword'] != -1:
 							play_audio("critical_cut")
 							effects.append(effect(self.screen, "resources/攻擊/sword" + str(parameter['sword']) + " %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
+							effects.append(effect(self.screen, "resources/攻擊/hit %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 						else:
 							play_audio("critical_hit")
 							effects.append(effect(self.screen, "resources/攻擊/hit %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
@@ -367,7 +362,444 @@ class fight():
 	def quit(self):
 		self.in_fighting = False
 		self.objects = []
+class conversation():
+	def __init__(self, screen):
+		self.in_conversation = False
+		self.screen = screen
+		self.objects = []
+		self.queue = []
 
+	def print_word(self, name, text, path = "",prompt = "", keys = []):
+		global key_system
+
+		if self.in_conversation:
+			self.queue.append((name, text, path))
+			return
+
+		self.in_conversation = True
+		self.objects.append(object(self.screen, "resources/字/msg_box.png", 13, 15, o_type = o_type.scene, multiple = 1))
+
+		if path != "":
+			if path in icons:
+				self.objects.append(object(self.screen, icons[path], 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
+			else:
+				self.objects.append(object(self.screen, path, 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
+
+		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 32)
+		self.objects.append(text_object(self.screen, font.render(name , True , (255,255,255)), (2, 9.5)))
+		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 20)
+		self.objects.append(text_object(self.screen, font.render(text , True , (255,255,255)), (1, 10.5)))
+
+		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 14)
+
+		if prompt == "":
+			if keys == []:
+				self.objects.append(text_object(self.screen, font.render("按任意鍵退出" , True , (255,255,255)), (11, 11.5)))
+			else:
+				self.objects.append(text_object(self.screen, font.render("（" + "，".join([str(chr(i)) for i in keys]) + "）" , True , (255,255,255)), (11, 11.5)))
+		else:
+			self.objects.append(text_object(self.screen, font.render(prompt , True , (255,255,255)), (11, 11.5)))
+
+		return key_system.in_conversation(keys)
+
+	def end_conversation(self, key = -1):
+		self.in_conversation = False
+
+		if self.queue != []:
+			arg = self.queue[0]
+			del self.queue[0]
+			self.print_word(arg[0], arg[1], arg[2])
+		else:
+			self.objects = []
+
+# graph object
+class text_object():
+	def __init__(self, screen, text, location):
+		self.text = text
+		self.location = location
+		self.screen = screen
+	def blitme(self):
+		self.screen.blit(self.text, (self.location[0] * 48 + 336, self.location[1] * 48 + 96))
+class object(): 
+	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None):
+		# RPG system
+
+		self.script = script
+
+		if script != None:
+			global conversation_control, variables
+
+			self.script.conversation_control = conversation_control
+			self.variables = variables
+			self.script.__init__(self.script, arg)
+			self.script.status = self
+
+		# Initialize on canvas and map
+		self.screen = screen
+
+		self.floor = floor
+		if path != "":
+			self.visible = True
+			self.valid   = True
+			self.dynamic = dynamic
+			if dynamic:
+				self.counter = 0
+				self.path = path
+				image = pygame.image.load(path % 0)
+				rect = image.get_rect()
+				image = pygame.transform.scale(image, (int(rect.width * multiple), int(rect.height * multiple)))
+				self.rect = image.get_rect()
+			else:
+				self.image = pygame.image.load(path)
+				self.rect = self.image.get_rect()
+				self.image = pygame.transform.scale(self.image, (int(self.rect.width * multiple), int(self.rect.height * multiple)))
+				self.rect = self.image.get_rect()
+		else:
+			self.visible = False
+			self.valid   = True
+
+		self.o_type = o_type
+		self.location = [x,y]
+
+		self.init2(arg)
+
+	def init2(self, arg): # Overwrite
+		pass
+
+	def trigger(self):
+		if self.o_type == o_type.wall: 
+			return False
+		return True
+
+	def blitme(self):
+		if self.visible:
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+			if self.dynamic:
+				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
+
+				self.screen.blit(image, self.rect)
+
+				self.counter += 1
+				if self.counter == 4:
+					self.counter = 0
+			else:
+				self.screen.blit(self.image, self.rect)
+
+	# RPG system
+
+	def cost(self, item, amount):
+		return cost(item, amount)
+
+# game objects
+class effect(object):
+	def blitme(self):
+		if self.visible:
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+			if self.dynamic:
+				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
+
+				self.screen.blit(image, self.rect)
+
+				self.counter += 1
+				if self.counter == 4:
+					self.visible = False
+			else:
+
+				self.screen.blit(self.image, self.rect)
+class monster(object):
+	def init2(self, arg):
+		global monsters
+		self.property = monsters[arg["m_type"]]
+
+	def trigger(self):
+		global fight_system, warrior
+		warrior.vector = [0, 0, warrior.vector[2]]
+		warrior.counter = 0
+
+		fight_system.fight_with(self)
+
+		if self.script != None:
+			self.script.trigger(self.script)
+class npc(object):
+	def init2(self, arg):
+		self.name = arg["name"]
+
+	def trigger(self):
+		if self.script != None:
+			global warrior
+			warrior.vector = [0, 0, warrior.vector[2]]
+			warrior.counter = 0
+
+			self.script.trigger(self.script)
+			return False
+class game_trigger(object):
+	def trigger(self):
+		if self.script != None:
+			t = self.script.trigger(self.script)
+			if t == False:
+				return False
+		return True
+class door(object):
+	def init2(self, parameter):
+		self.d_type = parameter['d_type']
+		self.parameter = parameter
+		self.is_open = False
+		self.count   = 0
+
+	def close(self):
+		self.is_open = False
+		self.visible = True
+		self.count   = 0
+
+		path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " 0.png"
+		self.image = pygame.image.load(path)
+		self.rect = self.image.get_rect()
+		self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
+		self.rect = self.image.get_rect()
+
+		play_audio("close_door")
+
+	def open(self):
+		self.is_open = True
+		if self.d_type <= 3:
+			play_audio("open_door")
+		elif self.d_type == 4:
+			play_audio("open_door2")
+
+	def trigger(self):
+		if not self.is_open:
+			if not self.d_type >= 3:
+				if cost(str(self.d_type) + "_key", 1, False):
+					self.is_open = True
+					play_audio("open_door")
+				return False
+			else:
+				if self.script!=None:
+					if self.script.trigger(self.script):
+						self.is_open = True
+						if self.d_type == 3:
+							play_audio("open_door")
+						elif self.d_type == 4:
+							play_audio("open_door2")
+					return False
+				else:
+					return False
+		else:
+			return not self.visible
+
+	def blitme(self):
+		if self.visible and not self.is_open:
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+
+			self.screen.blit(self.image, self.rect)
+		elif self.visible:
+			self.count += 1
+			if self.count == 4:
+				self.visible = False
+				return
+			path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " %s.png" % self.count
+			self.image = pygame.image.load(path)
+			self.rect = self.image.get_rect()
+			self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
+			self.rect = self.image.get_rect()
+
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+
+			self.screen.blit(self.image, self.rect)
+class floor():
+	def __init__(self, screen, data):
+		self.scene = data["scene"]
+
+		if 'config' in data:
+			self.config = data['config']
+		else:
+			self.config = {
+				"allow_teleport_to": true,
+				"allow_teleport_out": true
+			}
+
+		self.this_floor = data['floor']
+
+		self.objects 	= []
+
+		self.tags = {}
+		self.floors = {}
+
+		for i in range(1,14):
+			for j in range(1,14):
+				if type(self.scene[i - 1][j - 1]) == list:
+					scene_datas = self.scene[i - 1][j - 1]
+				else:
+					scene_datas = [self.scene[i - 1][j - 1]]
+				for scene_data in scene_datas:
+					if scene_data == 1:
+						self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
+
+					elif scene_data == 2:
+						self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
+
+					elif scene_data == 3:
+						self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == 4:
+						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
+
+						if not "allow_teleport_to" in scene_data:
+							if scene_data['goto'] > self.this_floor:
+								self.config['from_upper'] = (j, i)
+							else:
+								self.config["from_lower"] = (j, i)
+
+						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
+						module = __import__("scripts." + scene_data['program'])
+						NPC = eval("module." + scene_data['program'] + ".NPC")
+						path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
+
+						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
+						module = __import__("scripts." + scene_data['program'])
+						MST = eval("module." + scene_data['program'] + ".monster")
+						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
+
+						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
+					
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
+						module = __import__("scripts." + scene_data['program'])
+						trigger = eval("module." + scene_data['program'] + ".trigger")
+						path = scene_data['img'] if 'img' in scene_data else ''
+
+						self.objects.append(game_trigger(screen, path , j, i, o_type = o_type.trigger, script = trigger))
+			
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.door.value:
+
+						if 'program' in scene_data:
+							module = __import__("scripts." + scene_data['program'])
+							trigger = eval("module." + scene_data['program'] + ".trigger")
+						else:
+							trigger = None
+
+						path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][scene_data["d_type"]] + " 0.png"
+
+						self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = scene_data , script = trigger))
+
+					elif 62 >= scene_data >= 60:
+						self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][scene_data - 60]), j, i, o_type = o_type.door, arg = {"d_type": scene_data - 60}))
+					
+					elif 71 >= scene_data >= 70:
+						self.objects.append(object(screen, "resources/地形/" + (["lava","star"][scene_data - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
+					
+					elif 2000 > scene_data >= 1000:
+						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
+					elif scene_data >= 2000:
+						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
+
+					if type(scene_data) == dict and 'tag' in scene_data:
+							self.tags[scene_data['tag']] = self.objects[-1]
+					if type(scene_data) == dict and 'valid' in scene_data:
+							self.objects[-1].valid = scene_data['valid']
+					if type(scene_data) == dict and 'visible' in scene_data:
+							self.objects[-1].visible = scene_data['visible']
+
+					self.objects[-1].floor = self
+				
+	def blitme(self):
+		for i in self.objects:
+			i.blitme()
+class item(object):
+	def init2(self, arg):
+		self.i_type = arg['i_type']
+
+	def trigger(self):
+		global conversation_control, item_system
+		item_system.trigger(self.i_type)
+		self.valid = False
+		self.visible = False
+		return True
+class player(object):
+	def __init__(self, screen):
+		self.screen = screen
+
+		self.counter = 0
+		self.images = [[],[],[],[]]
+		for i in range(4):
+			self.images[0].append(pygame.transform.scale(pygame.image.load('resources/勇者/right %s.png' % i), (48, 48)))
+			self.images[1].append(pygame.transform.scale(pygame.image.load('resources/勇者/left %s.png' % i), (48, 48)))
+			self.images[2].append(pygame.transform.scale(pygame.image.load('resources/勇者/down %s.png' % i), (48, 48)))
+			self.images[3].append(pygame.transform.scale(pygame.image.load('resources/勇者/up %s.png' % i), (48, 48)))
+		self.rect = self.images[0][0].get_rect()
+		self.vector = [0,0,2]
+
+		self.location = [1,1]
+		self.speed = 3
+
+	def blitme(self):
+		self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width/2
+		self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+
+		self.screen.blit(self.images[self.vector[2]][self.counter], self.rect)
+
+	def move(self, objs):
+		if self.vector[:2] != [0,0]:
+			self.counter += 1
+			if self.counter == 4:
+				self.counter = 0
+		else:
+			return
+
+		for i in objs:
+			if i.valid and i.location == [self.location[0] + self.vector[0], self.location[1] + self.vector[1]]:
+				if i.o_type == o_type.floor:
+					t = this_floor.floors[(self.location[0] + self.vector[0], self.location[1] + self.vector[1])]
+					jump(self.screen, t[0], t[1])
+					return
+				if not i.trigger():
+					return
+
+				
+		self.location[0] += self.vector[0] 
+		self.location[1] +=  self.vector[1] 
+
+		if parameter['is_poisoning']:
+			parameter['health'] -= 20
+			if parameter['health'] <= 0:
+				parameter['health'] = 1
+			
+# game operation
+def jump(screen, destination, location):
+	global warrior, parameter, this_floor
+	warrior.vector = [0, 0, warrior.vector[2]]
+
+	if floors[destination].config['allow_teleport_to']:
+		parameter['teleport_points'].add(destination)
+
+		floors[parameter["this_floor"]] = this_floor
+		this_floor = floors[destination]
+		warrior.location = location
+
+	warrior.location = list(warrior.location)
+	parameter["this_floor"] = destination
+def cost(item, amount, voice = True):
+	if parameter[item] >= amount:
+		parameter[item] -= amount
+		if voice and item == "money":
+			play_audio("gold")
+		else:
+			if voice and amount > 0: 
+				play_audio("yes")
+		return True
+
+	if voice: play_audio("error")
+	return False
+
+# system
 class key_event():
 	def __init__(self, screen):
 		self.screen = screen
@@ -428,457 +860,11 @@ class key_event():
 						return event.key
 			update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
 			time.sleep(0.075)
-
-
-class conversation():
-	def __init__(self, screen):
-		self.in_conversation = False
-		self.screen = screen
-		self.objects = []
-		self.queue = []
-
-	def print_word(self, name, text, path = "",prompt = "", keys = []):
-		global key_system
-
-		if self.in_conversation:
-			self.queue.append((name, text, path))
-			return
-
-		self.in_conversation = True
-		self.objects.append(object(self.screen, "resources/字/msg_box.png", 13, 15, o_type = o_type.scene, multiple = 1))
-
-		if path != "":
-			if path in icons:
-				self.objects.append(object(self.screen, icons[path], 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
-			else:
-				self.objects.append(object(self.screen, path, 1.75, 11.25, o_type = o_type.scene, multiple = 1.5))
-
-		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 32)
-		self.objects.append(text_object(self.screen, font.render(name , True , (255,255,255)), (2, 9.5)))
-		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 20)
-		self.objects.append(text_object(self.screen, font.render(text , True , (255,255,255)), (1, 10.5)))
-
-		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 14)
-
-		if prompt == "":
-			if keys == []:
-				self.objects.append(text_object(self.screen, font.render("按任意鍵退出" , True , (255,255,255)), (11, 11.5)))
-			else:
-				self.objects.append(text_object(self.screen, font.render("（" + "，".join([str(chr(i)) for i in keys]) + "）" , True , (255,255,255)), (11, 11.5)))
-		else:
-			self.objects.append(text_object(self.screen, font.render(prompt , True , (255,255,255)), (11, 11.5)))
-
-		return key_system.in_conversation(keys)
-
-	def end_conversation(self, key = -1):
-		self.in_conversation = False
-
-		if self.queue != []:
-			arg = self.queue[0]
-			del self.queue[0]
-			self.print_word(arg[0], arg[1], arg[2])
-		else:
-			self.objects = []
-
-def cost(item, amount, voice = True):
-	if parameter[item] >= amount:
-		parameter[item] -= amount
-		if voice and item == "money":
-			play_audio("gold")
-		else:
-			if voice and amount > 0: 
-				play_audio("yes")
-		return True
-
-	if voice: play_audio("error")
-	return False
-
-class object(): 
-	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None):
-		# RPG system
-
-		self.script = script
-
-		if script != None:
-			global conversation_control, variables
-
-			self.script.conversation_control = conversation_control
-			self.variables = variables
-			self.script.status = self
-
-		# Initialize on canvas and map
-		self.screen = screen
-
-		self.floor = floor
-		if path != "":
-			self.visible = True
-			self.valid   = True
-			self.dynamic = dynamic
-			if dynamic:
-				self.counter = 0
-				self.path = path
-				image = pygame.image.load(path % 0)
-				rect = image.get_rect()
-				image = pygame.transform.scale(image, (int(rect.width * multiple), int(rect.height * multiple)))
-				self.rect = image.get_rect()
-			else:
-				self.image = pygame.image.load(path)
-				self.rect = self.image.get_rect()
-				self.image = pygame.transform.scale(self.image, (int(self.rect.width * multiple), int(self.rect.height * multiple)))
-				self.rect = self.image.get_rect()
-		else:
-			self.visible = False
-			self.valid   = True
-
-		self.o_type = o_type
-		self.location = [x,y]
-
-		self.init2(arg)
-
-	def init2(self, arg): # Overwrite
-		pass
-
-	def trigger(self):
-		if self.o_type == o_type.wall: 
-			return False
-		return True
-
-	def blitme(self):
-		if self.visible:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
-			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
-			if self.dynamic:
-				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
-
-				self.screen.blit(image, self.rect)
-
-				self.counter += 1
-				if self.counter == 4:
-					self.counter = 0
-			else:
-				self.screen.blit(self.image, self.rect)
-
-	# RPG system
-
-	def cost(self, item, amount):
-		return cost(item, amount)
-
-
-class effect(object):
-	def blitme(self):
-		if self.visible:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
-			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
-			if self.dynamic:
-				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
-
-				self.screen.blit(image, self.rect)
-
-				self.counter += 1
-				if self.counter == 4:
-					self.visible = False
-			else:
-
-				self.screen.blit(self.image, self.rect)
-
-
-class monster(object):
-	def init2(self, arg):
-		global monsters
-		self.property = monsters[arg["m_type"]]
-
-		if self.script != None:
-			self.script.__init__(self.script, arg)
-
-	def trigger(self):
-		global fight_system, warrior
-		warrior.vector = [0, 0, warrior.vector[2]]
-		warrior.counter = 0
-
-		fight_system.fight_with(self)
-
-		if self.script != None:
-			self.script.trigger(self.script)
-
-
-class npc(object):
-	def init2(self, arg):
-		self.name = arg["name"]
-		if self.script != None:
-			self.script.__init__(self.script, arg)
-
-	def trigger(self):
-		if self.script != None:
-			global warrior
-			warrior.vector = [0, 0, warrior.vector[2]]
-			warrior.counter = 0
-
-			self.script.trigger(self.script)
-			return False
-
-class game_trigger(object):
-	def trigger(self):
-		if self.script != None:
-			t = self.script.trigger(self.script)
-			if t == False:
-				return False
-		return True
-
-class door(object):
-	def init2(self, parameter):
-		self.d_type = parameter['d_type']
-		self.parameter = parameter
-		self.is_open = False
-		self.count   = 0
-
-	def close(self):
-		self.is_open = False
-		self.visible = True
-		self.count   = 0
-
-		path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " 0.png"
-		self.image = pygame.image.load(path)
-		self.rect = self.image.get_rect()
-		self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
-		self.rect = self.image.get_rect()
-
-		play_audio("close_door")
-
-	def open(self):
-		self.is_open = True
-		if self.d_type <= 3:
-			play_audio("open_door")
-		elif self.d_type == 4:
-			play_audio("open_door2")
-
-	def trigger(self):
-		if not self.is_open:
-			if not self.d_type >= 3:
-				if cost(str(self.d_type) + "_key", 1, False):
-					self.is_open = True
-					play_audio("open_door")
-				return False
-			else:
-				if self.script!=None:
-					if self.script.trigger():
-						self.is_open = True
-						if self.d_type == 3:
-							play_audio("open_door")
-						elif self.d_type == 4:
-							play_audio("open_door2")
-					return False
-				else:
-					return False
-		else:
-			return not self.visible
-
-	def blitme(self):
-		if self.visible and not self.is_open:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
-			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
-
-			self.screen.blit(self.image, self.rect)
-		elif self.visible:
-			self.count += 1
-			if self.count == 4:
-				self.visible = False
-				return
-			path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][self.d_type] + " %s.png" % self.count
-			self.image = pygame.image.load(path)
-			self.rect = self.image.get_rect()
-			self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
-			self.rect = self.image.get_rect()
-
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
-			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
-
-			self.screen.blit(self.image, self.rect)
-
-class floor():
-	def __init__(self, screen, data):
-		self.scene = data["scene"]
-
-		if 'config' in data:
-			self.config = data['config']
-		else:
-			self.config = {
-				"allow_teleport_to": true,
-				"allow_teleport_out": true
-			}
-
-		self.this_floor = data['floor']
-
-		self.objects 	= []
-
-		self.tags = {}
-		self.floors = {}
-
-		for i in range(1,14):
-			for j in range(1,14):
-				if type(self.scene[i - 1][j - 1]) == list:
-					scene_datas = self.scene[i - 1][j - 1]
-				else:
-					scene_datas = [self.scene[i - 1][j - 1]]
-				for scene_data in scene_datas:
-					if scene_data == 1:
-						self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
-
-					elif scene_data == 2:
-						self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
-
-					elif scene_data == 3:
-						self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == 4:
-						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
-
-						if not "allow_teleport_to" in scene_data:
-							if scene_data['goto'] > self.this_floor:
-								self.config['from_upper'] = (j, i)
-							else:
-								self.config["from_lower"] = (j, i)
-
-						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
-						module = __import__("scripts." + scene_data['program'])
-						exec("global NPC; NPC = module." + scene_data['program'] + ".NPC")
-						path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
-
-						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
-						module = __import__("scripts." + scene_data['program'])
-						exec("global MST; MST = module." + scene_data['program'] + ".monster;")
-						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
-
-						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
-					
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
-						module = __import__("scripts." + scene_data['program'])
-						exec("global trigger; trigger = module." + scene_data['program'] + ".trigger;")
-						path = scene_data['img'] if 'img' in scene_data else ''
-
-						self.objects.append(game_trigger(screen, path , j, i, o_type = o_type.trigger, script = trigger))
-			
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.door.value:
-						if 'program' in scene_data:
-							module = __import__("scripts." + scene_data['program'])
-							exec("global DR; DR = module." + scene_data['program'] + ".monster")
-						else:
-							DR = None
-						path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][scene_data["d_type"]] + " 0.png"
-
-						self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = scene_data , script = DR))
-
-					elif 62 >= scene_data >= 60:
-						self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][scene_data - 60]), j, i, o_type = o_type.door, arg = {"d_type": scene_data - 60}))
-					
-					elif 71 >= scene_data >= 70:
-						self.objects.append(object(screen, "resources/地形/" + (["lava","star"][scene_data - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
-					
-					elif 2000 > scene_data >= 1000:
-						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
-					elif scene_data >= 2000:
-						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
-
-					if type(scene_data) == dict and 'tag' in scene_data:
-							self.tags[scene_data['tag']] = self.objects[-1]
-					if type(scene_data) == dict and 'valid' in scene_data:
-							self.objects[-1].valid = scene_data['valid']
-					if type(scene_data) == dict and 'visible' in scene_data:
-							self.objects[-1].visible = scene_data['visible']
-
-					self.objects[-1].floor = self
-				
-	def blitme(self):
-		for i in self.objects:
-			i.blitme()
-
-class item(object):
-	def init2(self, arg):
-		self.i_type = arg['i_type']
-
-	def trigger(self):
-		global conversation_control, item_system
-		item_system.trigger(self.i_type)
-		self.valid = False
-		self.visible = False
-		return True
-
-
-class player(object):
-	def __init__(self, screen):
-		self.screen = screen
-
-		self.counter = 0
-		self.images = [[],[],[],[]]
-		for i in range(4):
-			self.images[0].append(pygame.transform.scale(pygame.image.load('resources/勇者/right %s.png' % i), (48, 48)))
-			self.images[1].append(pygame.transform.scale(pygame.image.load('resources/勇者/left %s.png' % i), (48, 48)))
-			self.images[2].append(pygame.transform.scale(pygame.image.load('resources/勇者/down %s.png' % i), (48, 48)))
-			self.images[3].append(pygame.transform.scale(pygame.image.load('resources/勇者/up %s.png' % i), (48, 48)))
-		self.rect = self.images[0][0].get_rect()
-		self.vector = [0,0,2]
-
-		self.location = [1,1]
-		self.speed = 3
-
-	def blitme(self):
-		self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width/2
-		self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
-
-		self.screen.blit(self.images[self.vector[2]][self.counter], self.rect)
-
-	def move(self, objs):
-		if self.vector[:2] != [0,0]:
-			self.counter += 1
-			if self.counter == 4:
-				self.counter = 0
-		else:
-			return
-
-		for i in objs:
-			if i.valid and i.location == [self.location[0] + self.vector[0], self.location[1] + self.vector[1]]:
-				if i.o_type == o_type.floor:
-					t = this_floor.floors[(self.location[0] + self.vector[0], self.location[1] + self.vector[1])]
-					jump(self.screen, t[0], t[1])
-					return
-				if not i.trigger():
-					return
-
-				
-		self.location[0] += self.vector[0] 
-		self.location[1] +=  self.vector[1] 
-
-		if parameter['is_poisoning']:
-			parameter['health'] -= 20
-			if parameter['health'] <= 0:
-				parameter['health'] = 1
-			
-
-
-def jump(screen, destination, location):
-	global warrior, parameter, this_floor
-	warrior.vector = [0, 0, warrior.vector[2]]
-
-	if floors[destination].config['allow_teleport_to']:
-		parameter['teleport_points'].add(destination)
-
-		floors[parameter["this_floor"]] = this_floor
-		this_floor = floors[destination]
-		warrior.location = location
-
-	warrior.location = list(warrior.location)
-	parameter["this_floor"] = destination
-
 def produce_number(screen, number,x ,y):
 	c = []
 	for i,j in enumerate(number):
 		c.append(object(screen, "resources/字/%s.png" % j, x + 0.5 * i, y - 0.025, o_type = o_type.scene, multiple = 0.22))
 	return c
-
 def play_audio(path):
 	global audio_player
 
@@ -887,13 +873,10 @@ def play_audio(path):
 
 	audio_player.load("resources/音效/" + path + ".mp3")
 	audio_player.play()
-
-
 def update_screen(screen, objects):
 	for i in objects:
 		i.blitme()
 	pygame.display.flip()
-
 
 
 pygame.init()
@@ -905,6 +888,7 @@ conversation_control = conversation(screen)
 fight_system = fight(screen)
 key_system = key_event(screen)
 tools_system = tools(screen)
+item_system = data.items.items(parameter, play_audio, conversation_control)
 
 grounds 	= []
 scenes 		= []
@@ -956,7 +940,6 @@ warrior.location = list(f['location'])
 
 del f
 
-item_system = data.items.items(parameter, play_audio, conversation_control)
 
 
 while True:
