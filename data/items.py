@@ -49,6 +49,10 @@ class items:
 		if self.i_type == 31:
 			parameter['money'] += 300
 			play_audio("money")
+		if self.i_type == 33:
+			play_audio("get")
+			conversation_control.print_word("","- 得到一把內鑲紅寶石的十字鎬 -")
+			parameter['variables']['pickaxe'] = True
 		if self.i_type == 34:
 			parameter['tools'].add("teleportation")
 			play_audio("get")
@@ -62,7 +66,8 @@ class items:
 		if self.i_type == 42:
 			parameter['variables']['power_of_nicolas'] = True
 			play_audio("get")
-			conversation_control.print_word("","把這玩意交給尼古拉就可以了吧！\n只是我真的該相信他嗎？")
+			conversation_control.print_word("","- 得到內鑲紅寶石的白色十字架 -")
+			conversation_control.print_word("勇者","把這玩意交給尼古拉就可以了吧！\n只是我真的該相信他嗎？" ,"player")
 		if self.i_type == 48:
 			parameter['attack'] += 10
 			parameter['sword'] = max(48, parameter['sword'])

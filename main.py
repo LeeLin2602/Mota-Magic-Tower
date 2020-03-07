@@ -447,10 +447,11 @@ class text_object():
 	def blitme(self):
 		self.screen.blit(self.text, (self.location[0] * 48 + 336, self.location[1] * 48 + 96))
 class object(): 
-	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None):
+	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None, script_before = None):
 		# RPG system
 
 		self.script = script
+		self.script_before = script_before
 
 		if script != None:
 			global conversation_control, parameter
@@ -535,12 +536,27 @@ class floor():
 				"allow_teleport_out": true
 			}
 
-		self.this_floor = data['floor']
-		
 		if 'bgm' in data:
 			self.bgm = data['bgm']
 		else:
 			self.bgm = ""
+
+		if "program" in data:
+			module = __import__("scripts." + scene_data['program'])
+			script = eval("module." + scene_data['program'] + ".trigger")
+			self.script = script
+		else:
+			self.script = None
+
+		if "program_before" in data:
+			module = __import__("scripts." + scene_data['program_before'])
+			script = eval("module." + scene_data['program_before'] + ".trigger")
+			self.script_before = script
+		else:
+			self.script_before = None
+
+		self.this_floor = data['floor']
+		
 
 		self.objects 	= []
 
@@ -588,13 +604,18 @@ class floor():
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
 						if "program" in scene_data:
 							module = __import__("scripts." + scene_data['program'])
-							MST = eval("module." + scene_data['program'] + ".monster")
+							MST1 = eval("module." + scene_data['program'] + ".monster")
 						else:
-							MST = None
+							MST1 = None
+
+						if "program_before" in scene_data:
+							module = __import__("scripts." + scene_data['program_before'])
+							MST2 = eval("module." + scene_data['program_before'] + ".monster")
+						else:
+							MST2 = None
 
 						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
-
-						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
+						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST1, script_before = MST2))
 					
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
 						module = __import__("scripts." + scene_data['program'])
@@ -664,6 +685,10 @@ class monster(object):
 		global fight_system, warrior
 		warrior.vector = [0, 0, warrior.vector[2]]
 		warrior.counter = 0
+
+		if self.script_before != None:
+			if self.script_before.trigger(self.script_before):
+				return
 
 		fight_system.fight_with(self)
 
@@ -762,10 +787,11 @@ class item(object):
 		self.i_type = arg['i_type']
 
 	def trigger(self):
-		global conversation_control, item_system
+		global conversation_control, item_system, warrior
 		self.valid = False
 		self.visible = False
 		item_system.trigger(self.i_type)
+		warrior.vector = [0, 0, warrior.vector[2]]
 		return True
 class player(object):
 	def __init__(self, screen):
@@ -791,7 +817,7 @@ class player(object):
 		self.screen.blit(self.images[self.vector[2]][self.counter], self.rect)
 
 	def move(self, objs):
-		if self.vector[:2] != [0,0]:
+		if self.vector[:2] != [0, 0]:
 			self.counter += 1
 			if self.counter == 4:
 				self.counter = 0
@@ -804,6 +830,7 @@ class player(object):
 					t = this_floor.floors[(self.location[0] + self.vector[0], self.location[1] + self.vector[1])]
 					jump(self.screen, t[0], t[1])
 					return
+
 				if not i.trigger():
 					return
 
@@ -834,6 +861,12 @@ def jump(screen, destination, location):
 
 	warrior.location = list(warrior.location)
 	parameter["this_floor"] = destination
+
+	if this_floor.script:
+		this_floor.script.trigger()
+
+	if floors[destination].script_before:
+		floors[destination].script_before.trigger()
 def cost(item, amount, voice = True):
 	if parameter[item] >= amount:
 		parameter[item] -= amount
@@ -922,10 +955,9 @@ def play_bgm(path):
 
 	if path:
 		audio_player.Channel(0).stop()
-		audio_player.Channel(0).play(audio_player.Sound("resources/音效/" + path + ".ogg"))
+		audio_player.Channel(0).play(audio_player.Sound("resources/音效/" + path + ".ogg"), loops = -1)
 	else:
 		audio_player.Channel(0).stop()
-
 def play_audio(path):
 	global audio_player
 
