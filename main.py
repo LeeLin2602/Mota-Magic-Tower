@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+
 import sys
 import pygame
 import time
@@ -39,18 +40,21 @@ class atk_type(Enum):
 	double = 3
 	triple = 4
 	bloodsuck = 5
+
 class npc_type(Enum):
 	fairy	 = 0
 	trader   = 1
 	old_man  = 2
 	thief    = 3
+	else_npc = 4
 
 icons = {
 	"npc_0" : "resources/NPC/仙女 0.png",
 	"npc_1" : "resources/NPC/老人 0.png",
 	"npc_2" : "resources/NPC/商人 0.png",
 	"npc_3" : "resources/NPC/盜賊 0.png",
-	"player": "resources/勇者/down 0.png"}
+	"player": "resources/勇者/down 0.png",
+	"nicolas": "resources/NPC/尼古拉 0.png"}
 
 monsters = {}
 monster = json.load(open("data/monsters_data.json", encoding="utf-8"))
@@ -59,16 +63,16 @@ floors = {}
 for i in monster['monster']:
 	monsters[i['id']] = i
 
-variables = {}
 parameter = {'this_floor': 0}
 
 parameter['teleport_points'] = set(); parameter['level'] = 1; parameter['health'] = 1000; parameter['attack_method'] = atk_type.physic;
 #parameter['attack'] = 10; parameter['defence'] = 10; parameter['agility'] = 1
-parameter['attack'] = 300; parameter['defence'] = 10; parameter['agility'] = 30 # for test
+parameter['attack'] = 600; parameter['defence'] = 10; parameter['agility'] = 30 # for test
 
 parameter['money'] = 200; parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
 parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
 parameter['tools'] = set()
+parameter['variables'] = dict()
 
 
 # game_system
@@ -246,7 +250,8 @@ class fight():
 			if counter == 4:
 				if rnd() > (agl - parameter['agility'])/110:
 					if rnd() < (parameter['agility'] - agl)/110:
-						hpcost = max(parameter['attack'] - dfs, 0) * 2					
+						hpcost = max(parameter['attack'] - dfs, 0) * 2	
+
 						if parameter['sword'] != -1:
 							play_audio("critical_cut")
 							effects.append(effect(self.screen, "resources/攻擊/sword" + str(parameter['sword']) + " %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
@@ -298,7 +303,12 @@ class fight():
 						parameter['is_poisoning'] = True
 				if rnd() > (parameter['agility'] - agl)/110:
 					if rnd() < (dexterity - parameter['agility'])/110:
-						parameter['health'] -= max(atk - parameter['defence'], 0) * 2
+
+						if attack_type == atk_type.magic.value:
+							parameter['health'] -= max(atk, 0) * 2
+						else:
+							parameter['health'] -= max(atk - parameter['defence'], 0) * 2
+
 						if attack_type == atk_type.bloodsuck.value:
 							hp += int(max(atk - parameter['defence'], 0) * 0.4 * rnd())
 						play_audio("critical_" + sound)
@@ -306,14 +316,20 @@ class fight():
 					else:
 						if attack_type == atk_type.bloodsuck.value:
 							hp += int(max(atk - parameter['defence'], 0) * 0.2 * rnd())
-						parameter['health'] -= max(atk - parameter['defence'], 0)
+
+						if attack_type == atk_type.magic.value:
+							parameter['health'] -= max(atk, 0)
+						else:
+							parameter['health'] -= max(atk - parameter['defence'], 0)
+
 						play_audio(sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					parameter['health'] = max(parameter['health'], 0)
 				else:
 					offset_player = 1.5
 					play_audio("miss")
-					effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
+					if img != "hit":
+						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 
 
 
@@ -388,7 +404,9 @@ class conversation():
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 32)
 		self.objects.append(text_object(self.screen, font.render(name , True , (255,255,255)), (2, 9.5)))
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 20)
-		self.objects.append(text_object(self.screen, font.render(text , True , (255,255,255)), (1, 10.5)))
+
+		for i, j in enumerate(text.split("\n")):
+			self.objects.append(text_object(self.screen, font.render(j , True , (255,255,255)), (1, 10.5 + i * 0.6)))
 
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 14)
 
@@ -427,11 +445,11 @@ class object():
 		self.script = script
 
 		if script != None:
-			global conversation_control, variables
+			global conversation_control, parameter
 
 			self.script.conversation_control = conversation_control
-			self.variables = variables
 			self.script.__init__(self.script, arg)
+			self.script.parameter = parameter
 			self.script.status = self
 
 		# Initialize on canvas and map
@@ -490,6 +508,11 @@ class object():
 
 	def cost(self, item, amount):
 		return cost(item, amount)
+
+	def expire(self):
+		self.valid = False
+		self.visible = False
+
 
 # game objects
 class effect(object):
@@ -659,13 +682,21 @@ class floor():
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
 						module = __import__("scripts." + scene_data['program'])
 						NPC = eval("module." + scene_data['program'] + ".NPC")
-						path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
+						
+						if scene_data["npc_type"] in {0, 1, 2, 3}:
+							path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
+						else:
+							path = "resources/NPC/" + scene_data["npc_type"] + " %s.png"
 
 						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
 
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
-						module = __import__("scripts." + scene_data['program'])
-						MST = eval("module." + scene_data['program'] + ".monster")
+						if "program" in scene_data:
+							module = __import__("scripts." + scene_data['program'])
+							MST = eval("module." + scene_data['program'] + ".monster")
+						else:
+							MST = None
+
 						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
 
 						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
@@ -899,13 +930,10 @@ for j in range(0,15):
 		scenes.append(object(screen, "resources/地形/ground.png", i, j, o_type = o_type.ground))
 	for i in range(0,15):
 		grounds.append(object(screen, "resources/地形/ground.png", i, j, o_type = o_type.ground))
-
-
 for i in range(-6,0):
 	scenes.append(object(screen, "resources/地形/wall 3.png", i,  0, o_type = o_type.scene))
 	scenes.append(object(screen, "resources/地形/wall 3.png", i, 14, o_type = o_type.scene))
 	scenes.append(object(screen, "resources/地形/wall 3.png", i, 7, o_type = o_type.scene))
-
 for i in range(15):
 	scenes.append(object(screen, "resources/地形/wall 3.png", i,  0, o_type = o_type.wall))
 	scenes.append(object(screen, "resources/地形/wall 3.png", i, 14, o_type = o_type.wall))
@@ -964,4 +992,4 @@ while True:
 		information.append(object(screen, "resources/道具/%s.png" % parameter['shield'], -2.5, 8.25, o_type = o_type.scene))
 
 	update_screen(screen, grounds + scenes + information + [this_floor, warrior] + conversation_control.objects)
-	time.sleep(0.075)
+	time.sleep(0.075) # Game

@@ -20,3 +20,56 @@
 		"allow_teleport_out": true
 	}
 }
+
+class o_type(Enum):
+	effect  = -2
+	scene 	= -1
+	ground 	= 0
+	wall 	= 1
+	monster = 2
+	npc 	= 3
+
+	floor 	= 4
+	trigger = 5
+
+	door = 6
+	barrier = 7
+
+	item = 8
+class d_type(Enum):
+	yellow = 0
+	blue   = 1
+	red    = 2
+	magic  = 3
+	fence  = 4
+class atk_type(Enum):
+	physic = 0
+	magic  = 1
+	poisonous = 2
+	double = 3
+	triple = 4
+	bloodsuck = 5
+
+class npc_type(Enum):
+	fairy	 = 0
+	trader   = 1
+	old_man  = 2
+	thief    = 3
+	else_npc = 4
+
+,
+		{
+			"id"  : 5,
+			"name": "大蝙蝠",
+			"path": "5",
+			"hp"  :	72,
+			"atk" : 100,
+			"dfs" : 16,
+			"dex" : 3,
+			"agility": 0,
+			"money": 1,
+			"atk_type": 0,
+			"sound": "hit",
+			"img": "hit",
+			"info": "無"
+		}

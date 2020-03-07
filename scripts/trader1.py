@@ -6,7 +6,6 @@ class NPC():
 
 		if key == ord('y') and self.status.cost("money", 200):
 			self.status.cost("attack", -8)
-			self.status.valid = False
-			self.status.visible = False
+			self.status.expire()
 		elif key == ord('y'):
 			self.conversation_control.print_word("商人","你沒有足夠的錢！" , 'npc_2')
