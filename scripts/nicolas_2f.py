@@ -3,7 +3,6 @@ class NPC():
 		pass
 
 	def trigger(self):
-		this_floor = self.status.floor
 
 		for i in range(10, 18):
 			if self.status.floor.tags[i].valid:

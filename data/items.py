@@ -66,40 +66,50 @@ class items:
 		if self.i_type == 48:
 			parameter['attack'] += 10
 			parameter['sword'] = max(48, parameter['sword'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到鐵劍 -")
 		if self.i_type == 49:
 			parameter['attack'] += 28
 			parameter['sword'] = max(49, parameter['sword'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到騎士長劍 -")
 		if self.i_type == 50:
 			parameter['attack'] += 40
 			parameter['sword'] = max(50, parameter['sword'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到勇者之劍 -")
 		if self.i_type == 51:
 			parameter['attack'] += 65
 			parameter['sword'] = max(51, parameter['sword'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到聖劍 -")
 		if self.i_type == 52:
-			parameter['attack'] += 80
+			parameter['attack'] += 100
 			parameter['sword'] = max(52, parameter['sword'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到翼神劍 -")
 		if self.i_type == 56:
 			parameter['defence'] += 12
 			parameter['shield'] = max(56, parameter['shield'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到鐵盾 -")
 		if self.i_type == 57:
-			parameter['defence'] += 30
+			parameter['defence'] += 8
 			parameter['shield'] = max(57, parameter['shield'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到騎士薄盾 -")
 		if self.i_type == 58:
 			parameter['defence'] += 42
 			parameter['shield'] = max(58, parameter['shield'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到勇者之盾 -")
 		if self.i_type == 59:
 			parameter['defence'] += 68
 			parameter['shield'] = max(59, parameter['shield'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到聖盾 -")
 		if self.i_type == 60:
-			parameter['defence'] += 85
+			parameter['defence'] += 105
 			parameter['shield'] = max(60, parameter['shield'])
-			play_audio("error")
+			play_audio("close_door")
+			conversation_control.print_word("","- 得到翼神盾 -")

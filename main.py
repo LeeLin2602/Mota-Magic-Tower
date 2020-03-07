@@ -40,7 +40,6 @@ class atk_type(Enum):
 	double = 3
 	triple = 4
 	bloodsuck = 5
-
 class npc_type(Enum):
 	fairy	 = 0
 	trader   = 1
@@ -63,17 +62,25 @@ floors = {}
 for i in monster['monster']:
 	monsters[i['id']] = i
 
-parameter = {'this_floor': 0}
-
-parameter['teleport_points'] = set(); parameter['level'] = 1; parameter['health'] = 1000; parameter['attack_method'] = atk_type.physic;
-#parameter['attack'] = 10; parameter['defence'] = 10; parameter['agility'] = 1
-parameter['attack'] = 600; parameter['defence'] = 10; parameter['agility'] = 30 # for test
-
-parameter['money'] = 200; parameter['0_key']  = 1; parameter['1_key']  = 1; parameter['2_key']  = 1
-parameter['sword']  = -1; parameter['shield']  = -1; parameter['is_poisoning'] = False
-parameter['tools'] = set()
-parameter['variables'] = dict()
-
+parameter = {
+				'this_floor': 0,
+				'teleport_points': set(),
+				'level': 1,
+				'health': 1000,
+				'attack_method': atk_type.physic,
+				'attack': 450,
+				'defence': 10,
+				'agility': 1,
+				'money': 200,
+				'0_key': 1,
+				'1_key': 1,
+				'2_key': 1,
+				'sword': -1,
+				'shield': -1,
+				'is_poisoning': False,
+				'tools': set(),
+				'variables': {} 
+			}
 
 # game_system
 class tools():
@@ -190,6 +197,7 @@ class fight():
 
 		path, hp, atk, dfs, agl, name, money, attack_type, sound, dexterity, img = monster.property['path'], monster.property['hp'], monster.property['atk'], monster.property['dfs'], monster.property['agility'], monster.property['name'], monster.property['money'], monster.property['atk_type'], monster.property['sound'], monster.property['dex'], monster.property['img']
 		
+
 		font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24)
 		font2 = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 18)
 		
@@ -940,6 +948,7 @@ for i in range(15):
 	scenes.append(object(screen, "resources/地形/wall 3.png", 0,  i, o_type = o_type.wall))
 	scenes.append(object(screen, "resources/地形/wall 3.png", 14, i, o_type = o_type.wall))
 	scenes.append(object(screen, "resources/地形/wall 3.png", -6, i, o_type = o_type.scene))
+
 
 scenes.append(object(screen, "resources/勇者/down 0.png", -4.5, 1.25, o_type = o_type.scene))
 scenes.append(object(screen, "resources/字/等级.png", -2.5, 0.75, o_type = o_type.scene,multiple = 1.2))

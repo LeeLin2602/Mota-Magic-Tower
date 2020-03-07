@@ -1,4 +1,4 @@
-{
+	{
 	"floor": 0,
 	"scene": [
 		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -19,7 +19,7 @@
 		"allow_teleport_to": true,
 		"allow_teleport_out": true
 	}
-}
+	}
 
 class o_type(Enum):
 	effect  = -2

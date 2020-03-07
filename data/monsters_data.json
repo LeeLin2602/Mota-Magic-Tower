@@ -101,8 +101,8 @@
 			"agility": 10,
 			"money": 30,
 			"atk_type": 3,
-			"sound": "sword48",
-			"img": "cut",
+			"sound": "cut",
+			"img": "sword48",
 			"info": "騎士和武士非常的相似，武士有武士精神，而騎士遵循騎士精神。紳士的他們，舞起劍來可是精準又有力。"
 		},
 		{
@@ -116,8 +116,8 @@
 			"agility": 5,
 			"money": 35,
 			"atk_type": 3,
-			"sound": "sword48",
-			"img": "cut",
+			"sound": "cut",
+			"img": "sword48",
 			"info": "穿上重甲的騎士防禦力大幅提高，雖然重甲讓他們移動變的更加吃力，但是攻擊起來可是一點也不含糊的。"
 		},
 		{
@@ -131,8 +131,8 @@
 			"agility": 5,
 			"money": 40,
 			"atk_type": 4,
-			"sound": "sword49",
-			"img": "cut",
+			"sound": "cut",
+			"img": "sword49",
 			"info": "已經化為亡靈的他們得到了更強大的能力，和無視重力的輕盈，擁有將一切入侵者斬殺的實力。"
 		}
 	]
