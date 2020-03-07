@@ -59,6 +59,10 @@ class items:
 			parameter['attack'] += 5
 			parameter['defence'] += 3
 			play_audio("get")
+		if self.i_type == 42:
+			parameter['variables']['power_of_nicolas'] = True
+			play_audio("get")
+			conversation_control.print_word("","把這玩意交給尼古拉就可以了吧！\n只是我真的該相信他嗎？")
 		if self.i_type == 48:
 			parameter['attack'] += 10
 			parameter['sword'] = max(48, parameter['sword'])
