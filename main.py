@@ -527,6 +527,7 @@ class floor():
 	def __init__(self, screen, data):
 		self.scene = data["scene"]
 
+		if 'config' in data:
 			self.config = data['config']
 		else:
 			self.config = {
