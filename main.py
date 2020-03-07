@@ -522,7 +522,122 @@ class object():
 		self.visible = False
 
 
-# game objects
+# game objects			
+class floor():
+	def __init__(self, screen, data):
+		self.scene = data["scene"]
+
+			self.config = data['config']
+		else:
+			self.config = {
+				"allow_teleport_to": true,
+				"allow_teleport_out": true
+			}
+
+		self.this_floor = data['floor']
+		
+		if 'bgm' in data:
+			self.bgm = data['bgm']
+		else:
+			self.bgm = ""
+
+		self.objects 	= []
+
+		self.tags = {}
+		self.floors = {}
+
+		for i in range(1,14):
+			for j in range(1,14):
+				if type(self.scene[i - 1][j - 1]) == list:
+					scene_datas = self.scene[i - 1][j - 1]
+				else:
+					scene_datas = [self.scene[i - 1][j - 1]]
+				for scene_data in scene_datas:
+					if scene_data == 1:
+						self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
+
+					elif scene_data == 2:
+						self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
+
+					elif scene_data == 3:
+						self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == 4:
+						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
+
+						if not "allow_teleport_to" in scene_data:
+							if scene_data['goto'] > self.this_floor:
+								self.config['from_upper'] = (j, i)
+							else:
+								self.config["from_lower"] = (j, i)
+
+						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
+						module = __import__("scripts." + scene_data['program'])
+						NPC = eval("module." + scene_data['program'] + ".NPC")
+						
+						if scene_data["npc_type"] in {0, 1, 2, 3}:
+							path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
+						else:
+							path = "resources/NPC/" + scene_data["npc_type"] + " %s.png"
+
+						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
+						if "program" in scene_data:
+							module = __import__("scripts." + scene_data['program'])
+							MST = eval("module." + scene_data['program'] + ".monster")
+						else:
+							MST = None
+
+						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
+
+						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
+					
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
+						module = __import__("scripts." + scene_data['program'])
+						trigger = eval("module." + scene_data['program'] + ".trigger")
+						path = scene_data['img'] if 'img' in scene_data else ''
+
+						self.objects.append(game_trigger(screen, path , j, i, o_type = o_type.trigger, script = trigger))
+			
+
+					elif type(scene_data) == dict and scene_data['o_type'] == o_type.door.value:
+
+						if 'program' in scene_data:
+							module = __import__("scripts." + scene_data['program'])
+							trigger = eval("module." + scene_data['program'] + ".trigger")
+						else:
+							trigger = None
+
+						path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][scene_data["d_type"]] + " 0.png"
+
+						self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = scene_data , script = trigger))
+
+					elif 62 >= scene_data >= 60:
+						self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][scene_data - 60]), j, i, o_type = o_type.door, arg = {"d_type": scene_data - 60}))
+					
+					elif 71 >= scene_data >= 70:
+						self.objects.append(object(screen, "resources/地形/" + (["lava","star"][scene_data - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
+					
+					elif 2000 > scene_data >= 1000:
+						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
+					elif scene_data >= 2000:
+						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
+
+					if type(scene_data) == dict and 'tag' in scene_data:
+							self.tags[scene_data['tag']] = self.objects[-1]
+					if type(scene_data) == dict and 'valid' in scene_data:
+							self.objects[-1].valid = scene_data['valid']
+					if type(scene_data) == dict and 'visible' in scene_data:
+							self.objects[-1].visible = scene_data['visible']
+
+					self.objects[-1].floor = self
+				
+	def blitme(self):
+		for i in self.objects:
+			i.blitme()
 class effect(object):
 	def blitme(self):
 		if self.visible:
@@ -641,126 +756,15 @@ class door(object):
 			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
 
 			self.screen.blit(self.image, self.rect)
-class floor():
-	def __init__(self, screen, data):
-		self.scene = data["scene"]
-
-		if 'config' in data:
-			self.config = data['config']
-		else:
-			self.config = {
-				"allow_teleport_to": true,
-				"allow_teleport_out": true
-			}
-
-		self.this_floor = data['floor']
-
-		self.objects 	= []
-
-		self.tags = {}
-		self.floors = {}
-
-		for i in range(1,14):
-			for j in range(1,14):
-				if type(self.scene[i - 1][j - 1]) == list:
-					scene_datas = self.scene[i - 1][j - 1]
-				else:
-					scene_datas = [self.scene[i - 1][j - 1]]
-				for scene_data in scene_datas:
-					if scene_data == 1:
-						self.objects.append(object(screen, "resources/地形/wall.png", j, i, o_type = o_type.wall))
-
-					elif scene_data == 2:
-						self.objects.append(object(screen, "resources/地形/wall 2.png", j, i, o_type = o_type.wall))
-
-					elif scene_data == 3:
-						self.objects.append(object(screen, "resources/地形/wall 3.png", j, i, o_type = o_type.wall))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == 4:
-						self.floors[(j, i)] = (scene_data['goto'], scene_data['location'])
-
-						if not "allow_teleport_to" in scene_data:
-							if scene_data['goto'] > self.this_floor:
-								self.config['from_upper'] = (j, i)
-							else:
-								self.config["from_lower"] = (j, i)
-
-						self.objects.append(object(screen, "resources/地形/" + str(scene_data['img']) + ".png", j, i, o_type = o_type.floor))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.npc.value:
-						module = __import__("scripts." + scene_data['program'])
-						NPC = eval("module." + scene_data['program'] + ".NPC")
-						
-						if scene_data["npc_type"] in {0, 1, 2, 3}:
-							path = "resources/NPC/" + ["仙女", "老人", "商人", "盜賊"][scene_data["npc_type"]] + " %s.png"
-						else:
-							path = "resources/NPC/" + scene_data["npc_type"] + " %s.png"
-
-						self.objects.append(npc(screen, path , j, i, dynamic = True, o_type = o_type.npc, arg = scene_data, script = NPC))
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.monster.value:
-						if "program" in scene_data:
-							module = __import__("scripts." + scene_data['program'])
-							MST = eval("module." + scene_data['program'] + ".monster")
-						else:
-							MST = None
-
-						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
-
-						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST))
-					
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
-						module = __import__("scripts." + scene_data['program'])
-						trigger = eval("module." + scene_data['program'] + ".trigger")
-						path = scene_data['img'] if 'img' in scene_data else ''
-
-						self.objects.append(game_trigger(screen, path , j, i, o_type = o_type.trigger, script = trigger))
-			
-
-					elif type(scene_data) == dict and scene_data['o_type'] == o_type.door.value:
-
-						if 'program' in scene_data:
-							module = __import__("scripts." + scene_data['program'])
-							trigger = eval("module." + scene_data['program'] + ".trigger")
-						else:
-							trigger = None
-
-						path = "resources/地形/門/" + ["黃","藍","紅","魔法","柵欄"][scene_data["d_type"]] + " 0.png"
-
-						self.objects.append(door(screen, path , j, i, o_type = o_type.door, arg = scene_data , script = trigger))
-
-					elif 62 >= scene_data >= 60:
-						self.objects.append(door(screen, "resources/地形/門/%s 0.png" % (["黃","藍","紅"][scene_data - 60]), j, i, o_type = o_type.door, arg = {"d_type": scene_data - 60}))
-					
-					elif 71 >= scene_data >= 70:
-						self.objects.append(object(screen, "resources/地形/" + (["lava","star"][scene_data - 70]) + " %s.png", j, i, dynamic = True, o_type = o_type.wall))
-					
-					elif 2000 > scene_data >= 1000:
-						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
-					elif scene_data >= 2000:
-						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
-
-					if type(scene_data) == dict and 'tag' in scene_data:
-							self.tags[scene_data['tag']] = self.objects[-1]
-					if type(scene_data) == dict and 'valid' in scene_data:
-							self.objects[-1].valid = scene_data['valid']
-					if type(scene_data) == dict and 'visible' in scene_data:
-							self.objects[-1].visible = scene_data['visible']
-
-					self.objects[-1].floor = self
-				
-	def blitme(self):
-		for i in self.objects:
-			i.blitme()
 class item(object):
 	def init2(self, arg):
 		self.i_type = arg['i_type']
 
 	def trigger(self):
 		global conversation_control, item_system
-		item_system.trigger(self.i_type)
 		self.valid = False
 		self.visible = False
+		item_system.trigger(self.i_type)
 		return True
 class player(object):
 	def __init__(self, screen):
@@ -814,8 +818,10 @@ class player(object):
 # game operation
 def jump(screen, destination, location):
 	global warrior, parameter, this_floor
-	if this_floor['bgm'] != floors[destination]['bgm']:
-		play_bgm(floors[destination]['bgm'])
+	
+	if this_floor.bgm != floors[destination].bgm:
+		play_bgm(floors[destination].bgm)
+
 	warrior.vector = [0, 0, warrior.vector[2]]
 
 	if floors[destination].config['allow_teleport_to']:
@@ -914,7 +920,8 @@ def play_bgm(path):
 	global audio_player
 
 	if path:
-		audio_player.Channel(0).play(audio_player.Sound("resources/音效/" + path + ".ogg"), loop = -1)
+		audio_player.Channel(0).stop()
+		audio_player.Channel(0).play(audio_player.Sound("resources/音效/" + path + ".ogg"))
 	else:
 		audio_player.Channel(0).stop()
 
@@ -987,7 +994,8 @@ for i in f['floors']:
 
 this_floor = floors[f["start"]]
 parameter['teleport_points'].add(f['start'])
-play_bgm(this_floor['bgm'])
+
+play_bgm(this_floor.bgm)
 
 warrior.location = list(f['location'])
 
