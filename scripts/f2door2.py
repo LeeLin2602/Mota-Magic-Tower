@@ -5,5 +5,5 @@ class monster():
 	def trigger(self):
 		this_floor = self.status.floor
 		if not (this_floor.tags[0].valid or this_floor.tags[1].valid):
-			this_floor.tags[2].is_open = True
+			this_floor.tags[2].open()
 			self.status.valid = False

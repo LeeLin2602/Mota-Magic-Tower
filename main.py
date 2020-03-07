@@ -68,7 +68,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 450,
+				'attack': 850,
 				'defence': 10,
 				'agility': 1,
 				'money': 200,
@@ -350,7 +350,7 @@ class fight():
 
 			update_screen(self.screen, grounds + scenes + information + [warrior] + this_floor.objects + this_scenes + objects + effects)
 
-			time.sleep(0.075)
+			time.sleep(0.0325)
 			counter += 1
 
 		objects = []
@@ -814,6 +814,8 @@ class player(object):
 # game operation
 def jump(screen, destination, location):
 	global warrior, parameter, this_floor
+	if this_floor['bgm'] != floors[destination]['bgm']:
+		play_bgm(floors[destination]['bgm'])
 	warrior.vector = [0, 0, warrior.vector[2]]
 
 	if floors[destination].config['allow_teleport_to']:
@@ -843,8 +845,12 @@ class key_event():
 	def __init__(self, screen):
 		self.screen = screen
 
-	def check_events(self, objs):
-		global warrior, tools_system, this_floor,parameter
+	def check_events(self):
+		global warrior, tools_system, this_floor, parameter, conversation_control
+		
+		if conversation_control.in_conversation:
+			return
+
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:			# exit game
 				sys.exit()
@@ -878,7 +884,7 @@ class key_event():
 				elif event.key == pygame.K_UP:
 					warrior.vector = [warrior.vector[0], 0, warrior.vector[2]]
 		
-		warrior.move(objs)
+		
 
 	def in_conversation(self, keys):
 		global this_floor, grounds, information, scenes, warrior
@@ -904,14 +910,21 @@ def produce_number(screen, number,x ,y):
 	for i,j in enumerate(number):
 		c.append(object(screen, "resources/字/%s.png" % j, x + 0.5 * i, y - 0.025, o_type = o_type.scene, multiple = 0.22))
 	return c
+def play_bgm(path):
+	global audio_player
+
+	if path:
+		audio_player.Channel(0).play(audio_player.Sound("resources/音效/" + path + ".ogg"), loop = -1)
+	else:
+		audio_player.Channel(0).stop()
+
 def play_audio(path):
 	global audio_player
 
-	if audio_player.get_busy():
-		audio_player.stop()
-
-	audio_player.load("resources/音效/" + path + ".mp3")
-	audio_player.play()
+	for i in range(1, 10):
+		if not audio_player.Channel(i).get_busy():
+			audio_player.Channel(i).play(audio_player.Sound("resources/音效/" + path + ".ogg"))
+			return
 def update_screen(screen, objects):
 	for i in objects:
 		i.blitme()
@@ -919,9 +932,11 @@ def update_screen(screen, objects):
 
 
 pygame.init()
+pygame.mixer.init()
 
 screen  = pygame.display.set_mode((int(576 * 1.5 + 144), int(480 * 1.5)))
-audio_player = pygame.mixer.music
+audio_player = pygame.mixer
+audio_player.set_num_channels(10)
 
 conversation_control = conversation(screen)
 fight_system = fight(screen)
@@ -972,33 +987,37 @@ for i in f['floors']:
 
 this_floor = floors[f["start"]]
 parameter['teleport_points'].add(f['start'])
+play_bgm(this_floor['bgm'])
 
 warrior.location = list(f['location'])
 
 del f
 
-
-
+k = 0
 while True:
-	if not conversation_control.in_conversation:
-		key_system.check_events(scenes + this_floor.objects)
+	k += 1
+	key_system.check_events()
 
-	information = (produce_number(screen, str(parameter['level']), -2.1, 1) + 
-		   produce_number(screen, str(parameter['health']), -3, 2) + 
-		   produce_number(screen, str(parameter['attack']), -3, 3) + 
-		   produce_number(screen, str(parameter['defence']), -3, 4) + 
-		   produce_number(screen, str(parameter['agility']), -3, 5) +
-		   produce_number(screen, str(parameter['0_key']), -3.5, 9) +
-		   produce_number(screen, str(parameter['1_key']), -3.5, 10) +
-		   produce_number(screen, str(parameter['2_key']), -3.5, 11) +
-		   produce_number(screen, str(parameter['money']), -3.5, 12))
+	if k == 2:
+		information = (produce_number(screen, str(parameter['level']), -2.1, 1) + 
+			   produce_number(screen, str(parameter['health']), -3, 2) + 
+			   produce_number(screen, str(parameter['attack']), -3, 3) + 
+			   produce_number(screen, str(parameter['defence']), -3, 4) + 
+			   produce_number(screen, str(parameter['agility']), -3, 5) +
+			   produce_number(screen, str(parameter['0_key']), -3.5, 9) +
+			   produce_number(screen, str(parameter['1_key']), -3.5, 10) +
+			   produce_number(screen, str(parameter['2_key']), -3.5, 11) +
+			   produce_number(screen, str(parameter['money']), -3.5, 12))
 
-	if parameter['is_poisoning']:
-		information.append(text_object(screen, pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24).render(str("（中毒）") , True , (0,255,0)), (-4.1, -0.8)))
-	if parameter['sword'] != -1:
-		information.append(object(screen, "resources/道具/%s.png" % parameter['sword'], -4.5, 8.25, o_type = o_type.scene))
-	if parameter['shield'] != -1:
-		information.append(object(screen, "resources/道具/%s.png" % parameter['shield'], -2.5, 8.25, o_type = o_type.scene))
+		if parameter['is_poisoning']:
+			information.append(text_object(screen, pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24).render(str("（中毒）") , True , (0,255,0)), (-4.1, -0.8)))
+		if parameter['sword'] != -1:
+			information.append(object(screen, "resources/道具/%s.png" % parameter['sword'], -4.5, 8.25, o_type = o_type.scene))
+		if parameter['shield'] != -1:
+			information.append(object(screen, "resources/道具/%s.png" % parameter['shield'], -2.5, 8.25, o_type = o_type.scene))
 
-	update_screen(screen, grounds + scenes + information + [this_floor, warrior] + conversation_control.objects)
-	time.sleep(0.075) # Game
+		warrior.move(scenes + this_floor.objects)
+		update_screen(screen, grounds + scenes + information + [this_floor, warrior] + conversation_control.objects)
+		k = 0
+
+	time.sleep(0.0325) # Game

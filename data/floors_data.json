@@ -1,6 +1,7 @@
 {
 	"start": 0,
 	"location": [7, 13],
+	"bgm":"B0",
 	"floors": [{
 		"name": "start",
 		"floor": 0,
