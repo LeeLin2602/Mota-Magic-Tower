@@ -55,7 +55,7 @@ icons = {
 	"npc_3" : "resources/NPC/盜賊 0.png",
 	"player": "resources/勇者/down 0.png",
 	"nicolas": "resources/NPC/尼古拉 0.png",
-	"god": "resources/NPC/blue_god1 0.png"}
+	"blue_god": "resources/NPC/blue_god1 0.png"}
 
 monsters = {}
 monster = json.load(open("data/monsters_data.json", encoding="utf-8"))
@@ -73,7 +73,7 @@ parameter = {
 				'attack': 120,
 				'defence': 8,
 				'agility': 1,
-				'money': 0,
+				'money': 1000,
 				'0_key': 1,
 				'1_key': 1,
 				'2_key': 1,
@@ -114,11 +114,17 @@ class tools():
 
 			for i in range(min(len(monsters) - t, 2)):
 				if i + t < len(monsters):
-					damage = 9999999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4]) / (2 if parameter['attack_method']==atk_type.double else (3 if parameter['attack_method']==atk_type.triple.triple else 1))) - 1)
+					if parameter['attack'] <= monsters[t + i][4]:
+						damage = 9999999
+					else:
+						damage = (monsters[t + i][3] - parameter['defence']) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4] * (2 if parameter['attack_method'] == atk_type.double else (3 if parameter['attack_method'] == atk_type.triple else 1)))) - 1)
 					
 					if monsters[t + i][6] == atk_type.magic.value:
-						damage = 9999999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4]) / (2 if parameter['attack_method']==atk_type.double else (3 if parameter['attack_method']==atk_type.triple.triple else 1)) - 1))
-
+						if parameter['attack'] <= monsters[t + i][4]:
+							damage = 9999999
+						else:
+							damage = (monsters[t + i][3]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4] * (2 if parameter['attack_method'] == atk_type.double else (3 if parameter['attack_method'] == atk_type.triple else 1)))) - 1)
+					
 					if damage != 9999999 and monsters[t + i][6] == atk_type.double.value:
 						damage *= 2
 					elif damage != 9999999 and monsters[t + i][6] == atk_type.double.triple.value:
@@ -391,12 +397,57 @@ class fight():
 	def quit(self):
 		self.in_fighting = False
 		self.objects = []
+
 class conversation():
+
 	def __init__(self, screen):
 		self.in_conversation = False
 		self.screen = screen
 		self.objects = []
 		self.queue = []
+	
+	def choice(self, path, text, choices, now_index = 0):
+		global key_system
+
+		while True:
+			self.objects = []
+
+			self.objects.append(object(self.screen, "resources/字/fgt_box.png", 13, 14, o_type = o_type.scene, multiple = 1))
+
+			if path != "":
+				if path in icons:
+					self.objects.append(object(self.screen, icons[path], 8, 3.5, o_type = o_type.scene, multiple = 1.5))
+				else:
+					self.objects.append(object(self.screen, path, 8, 3.5, o_type = o_type.scene, multiple = 1.5))
+
+			font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 23)
+			
+			for i, j in enumerate(text.split("\n")):
+				self.objects.append(text_object(self.screen, font.render(j , True , (255,255,255)), (1, 3 + i * 0.7)))
+			
+			for i, j in enumerate(choices):
+				self.objects.append(text_object(self.screen, font.render(str(j) + "   <-----" if i == now_index else str(j) , True , (255,255,255)), (5, 4.5 + i * 0.6)))
+
+			font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 14)
+
+			self.objects.append(text_object(self.screen, font.render("（上下鍵選擇、SPACE購買、Q離開）" , True , (255,255,255)), (8, 6.7)))
+
+		
+			read_key = key_system.in_conversation([pygame.K_UP, pygame.K_DOWN, ord("q"), ord(" ")])
+			self.in_conversation = True
+
+			if read_key == ord("q"):
+				self.in_conversation = False
+				return -1
+			elif read_key == ord(" "):
+				self.in_conversation = False
+				return now_index
+			elif read_key == pygame.K_UP:
+				now_index = max(now_index - 1, 0)
+			elif read_key == pygame.K_DOWN:
+				now_index = min(now_index + 1, len(choices) - 1)
+
+			time.sleep(0.075)
 
 	def print_word(self, name, text, path = "",prompt = "", keys = []):
 		global key_system
@@ -711,6 +762,7 @@ class npc(object):
 			warrior.vector = [0, 0, warrior.vector[2]]
 			warrior.counter = 0
 
+			self.script.cost = self.cost
 			self.script.trigger(self.script)
 			return False
 class game_trigger(object):
@@ -945,9 +997,21 @@ class key_event():
 		
 
 	def in_conversation(self, keys):
-		global this_floor, grounds, information, scenes, warrior
+		global this_floor, grounds, information, scenes, warrior, parameter
 		global conversation_control
+
 		while conversation_control.in_conversation:
+
+			information = (produce_number(screen, str(parameter['level']), -2.1, 1) + 
+				   produce_number(screen, str(parameter['health']), -3, 2) + 
+				   produce_number(screen, str(parameter['attack']), -3, 3) + 
+				   produce_number(screen, str(parameter['defence']), -3, 4) + 
+				   produce_number(screen, str(parameter['agility']), -3, 5) +
+				   produce_number(screen, str(parameter['0_key']), -3.5, 9) +
+				   produce_number(screen, str(parameter['1_key']), -3.5, 10) +
+				   produce_number(screen, str(parameter['2_key']), -3.5, 11) +
+				   produce_number(screen, str(parameter['money']), -3.5, 12))
+
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					sys.exit()
@@ -1079,5 +1143,4 @@ while True:
 		warrior.move(scenes + this_floor.objects)
 		update_screen(screen, grounds + scenes + information + [this_floor, warrior] + conversation_control.objects)
 		k = 0
-
 	time.sleep(0.0325) # Game
