@@ -55,7 +55,8 @@ icons = {
 	"npc_3" : "resources/NPC/盜賊 0.png",
 	"player": "resources/勇者/down 0.png",
 	"nicolas": "resources/NPC/尼古拉 0.png",
-	"blue_god": "resources/NPC/blue_god1 0.png"}
+	"blue_god": "resources/NPC/blue_god1 0.png"
+	}
 
 monsters = {}
 monster = json.load(open("data/monsters_data.json", encoding="utf-8"))
@@ -81,8 +82,7 @@ parameter = {
 				'shield': -1,
 				'is_poisoning': False,
 				'tools': set(),
-				'variables': {} 
-			}
+				'variables': {} }
 
 # game_system
 class tools():
@@ -95,7 +95,7 @@ class tools():
 		monsters = []
 
 		for i in this_floor.objects:
-			if i.o_type == o_type.monster and i.valid:
+			if i.o_type == o_type.monster and i.valid and i.showed:
 				monster = (i.property['name'], i.property['path'], i.property['hp'], i.property['atk'], i.property['dfs'], i.property['money'], i.property['atk_type'], i.property['info'])
 				if not monster in monsters:
 					monsters.append(monster)
@@ -183,13 +183,16 @@ class tools():
 			elif key == 32: # ASCII(SPACE) = 32
 				if t[m] >= parameter['this_floor']:
 					if "from_lower" in floors[t[m]].config:
+						play_audio("miss")
 						jump(self.screen, t[m], floors[t[m]].config["from_lower"])
 					else:
 						conversation_control.print_word("","無法找到著陸點")
 				else:
 					if "from_upper" in floors[t[m]].config:
+						play_audio("miss")
 						jump(self.screen, t[m], floors[t[m]].config["from_upper"])
 					elif "from_lower" in floors[t[m]].config:
+						play_audio("miss")
 						jump(self.screen, t[m], floors[t[m]].config["from_lower"])
 					else:
 						conversation_control.print_word("","無法找到著陸點")
@@ -397,7 +400,6 @@ class fight():
 	def quit(self):
 		self.in_fighting = False
 		self.objects = []
-
 class conversation():
 
 	def __init__(self, screen):
@@ -447,7 +449,6 @@ class conversation():
 			elif read_key == pygame.K_DOWN:
 				now_index = min(now_index + 1, len(choices) - 1)
 
-			time.sleep(0.075)
 
 	def print_word(self, name, text, path = "",prompt = "", keys = []):
 		global key_system
@@ -493,7 +494,6 @@ class conversation():
 			self.print_word(arg[0], arg[1], arg[2])
 		else:
 			self.objects = []
-
 # graph object
 class text_object():
 	def __init__(self, screen, text, location):
@@ -577,8 +577,6 @@ class object():
 	def expire(self):
 		self.valid = False
 		self.visible = False
-
-
 # game objects			
 class floor():
 	def __init__(self, screen, data):
@@ -670,8 +668,11 @@ class floor():
 						else:
 							MST2 = None
 
+						if "showed" not in scene_data:
+							scene_data["showed"] = True
+
 						path = "resources/怪物/" + str(scene_data["m_type"] - 2000) + ",%s.png"
-						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000}, script = MST1, script_before = MST2))
+						self.objects.append(monster(screen, path , j, i, dynamic = True, o_type = o_type.monster, arg = {"m_type": scene_data["m_type"] - 2000,"showed": scene_data["showed"]}, script = MST1, script_before = MST2))
 					
 					elif type(scene_data) == dict and scene_data['o_type'] == o_type.trigger.value:
 						module = __import__("scripts." + scene_data['program'])
@@ -702,7 +703,7 @@ class floor():
 					elif 2000 > scene_data >= 1000:
 						self.objects.append(item(screen, "resources/道具/%s.png" % str(scene_data - 1000), j, i, o_type = o_type.item, arg = {'i_type': scene_data - 1000}))
 					elif scene_data >= 2000:
-						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000}))
+						self.objects.append(monster(screen, "resources/怪物/" + str(scene_data - 2000) + ",%s.png", j, i, dynamic = True, o_type = o_type.monster, arg = {'m_type': scene_data % 1000, "showed": True}))
 
 					if type(scene_data) == dict and 'tag' in scene_data:
 							self.tags[scene_data['tag']] = self.objects[-1]
@@ -717,7 +718,6 @@ class floor():
 	def blitme(self):
 		for i in self.objects:
 			i.blitme()
-
 class effect(object):
 	def blitme(self):
 		if self.visible:
@@ -738,6 +738,7 @@ class monster(object):
 	def init2(self, arg):
 		global monsters
 		self.property = monsters[arg["m_type"]]
+		self.showed = arg["showed"]
 
 	def trigger(self):
 		global fight_system, warrior
@@ -901,7 +902,6 @@ class player(object):
 			parameter['health'] -= 20
 			if parameter['health'] <= 0:
 				parameter['health'] = 1
-			
 # game operation
 def jump(screen, destination, location):
 	global warrior, parameter, this_floor, open_bgm
@@ -938,7 +938,6 @@ def cost(item, amount, voice = True):
 
 	if voice: play_audio("error")
 	return False
-
 # system
 class key_event():
 	def __init__(self, screen):
@@ -1000,6 +999,7 @@ class key_event():
 		global this_floor, grounds, information, scenes, warrior, parameter
 		global conversation_control
 
+		k = 0
 		while conversation_control.in_conversation:
 
 			information = (produce_number(screen, str(parameter['level']), -2.1, 1) + 
@@ -1011,6 +1011,13 @@ class key_event():
 				   produce_number(screen, str(parameter['1_key']), -3.5, 10) +
 				   produce_number(screen, str(parameter['2_key']), -3.5, 11) +
 				   produce_number(screen, str(parameter['money']), -3.5, 12))
+
+			if parameter['is_poisoning']:
+				information.append(text_object(screen, pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 24).render(str("（中毒）") , True , (0,255,0)), (-4.1, -0.8)))
+			if parameter['sword'] != -1:
+				information.append(object(screen, "resources/道具/%s.png" % parameter['sword'], -4.5, 8.25, o_type = o_type.scene))
+			if parameter['shield'] != -1:
+				information.append(object(screen, "resources/道具/%s.png" % parameter['shield'], -2.5, 8.25, o_type = o_type.scene))
 
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
@@ -1025,8 +1032,13 @@ class key_event():
 						pygame.event.clear()
 						play_audio("error")
 						return event.key
-			update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
-			time.sleep(0.075)
+			if k == 1:
+				update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
+				k = 0
+			else:
+				update_screen(self.screen, information + conversation_control.objects)
+				k += 1
+			time.sleep(0.016125)
 def produce_number(screen, number,x ,y):
 	c = []
 	for i,j in enumerate(number):
@@ -1118,6 +1130,7 @@ warrior.location = list(f['location'])
 del f
 
 k = 0
+
 while True:
 	k += 1
 	key_system.check_events()
