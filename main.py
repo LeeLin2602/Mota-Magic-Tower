@@ -46,6 +46,7 @@ class npc_type(Enum):
 	old_man  = 2
 	thief    = 3
 	else_npc = 4
+	god 	 = 5
 
 icons = {
 	"npc_0" : "resources/NPC/仙女 0.png",
@@ -53,7 +54,8 @@ icons = {
 	"npc_2" : "resources/NPC/商人 0.png",
 	"npc_3" : "resources/NPC/盜賊 0.png",
 	"player": "resources/勇者/down 0.png",
-	"nicolas": "resources/NPC/尼古拉 0.png"}
+	"nicolas": "resources/NPC/尼古拉 0.png",
+	"god": "resources/NPC/blue_god1 0.png"}
 
 monsters = {}
 monster = json.load(open("data/monsters_data.json", encoding="utf-8"))
@@ -67,11 +69,11 @@ parameter = {
 				'teleport_points': set(),
 				'level': 1,
 				'health': 1000,
-				'attack_method': atk_type.double,
-				'attack': 10,
-				'defence': 10,
+				'attack_method': atk_type.physic,
+				'attack': 120,
+				'defence': 8,
 				'agility': 1,
-				'money': 200,
+				'money': 0,
 				'0_key': 1,
 				'1_key': 1,
 				'2_key': 1,
@@ -664,6 +666,7 @@ class floor():
 	def blitme(self):
 		for i in self.objects:
 			i.blitme()
+
 class effect(object):
 	def blitme(self):
 		if self.visible:
@@ -849,9 +852,9 @@ class player(object):
 			
 # game operation
 def jump(screen, destination, location):
-	global warrior, parameter, this_floor
+	global warrior, parameter, this_floor, open_bgm
 	
-	if this_floor.bgm != floors[destination].bgm:
+	if open_bgm and this_floor.bgm != floors[destination].bgm:
 		play_bgm(floors[destination].bgm)
 
 	warrior.vector = [0, 0, warrior.vector[2]]
@@ -890,7 +893,7 @@ class key_event():
 		self.screen = screen
 
 	def check_events(self):
-		global warrior, tools_system, this_floor, parameter, conversation_control
+		global warrior, tools_system, this_floor, parameter, conversation_control, open_bgm
 		
 		if conversation_control.in_conversation:
 			return
@@ -908,6 +911,17 @@ class key_event():
 				elif event.key == pygame.K_UP:
 					warrior.vector = [0,-1, 3]
 
+				# game setting
+				
+				if event.key == ord("m"):
+					global audio_player
+					if audio_player.get_busy():
+						open_bgm = False
+						play_bgm()
+					else:
+						open_bgm = True
+						play_bgm(this_floor.bgm)
+				
 				# tools control: 
 				
 				if event.key == ord("f") and 'teleportation' in parameter['tools'] and this_floor.config['allow_teleport_out']:
@@ -954,7 +968,7 @@ def produce_number(screen, number,x ,y):
 	for i,j in enumerate(number):
 		c.append(object(screen, "resources/字/%s.png" % j, x + 0.5 * i, y - 0.025, o_type = o_type.scene, multiple = 0.22))
 	return c
-def play_bgm(path):
+def play_bgm(path = ""):
 	global audio_player
 
 	if path:
@@ -981,6 +995,7 @@ pygame.mixer.init()
 screen  = pygame.display.set_mode((int(576 * 1.5 + 144), int(480 * 1.5)))
 audio_player = pygame.mixer
 audio_player.set_num_channels(10)
+open_bgm = True
 
 conversation_control = conversation(screen)
 fight_system = fight(screen)

@@ -11,10 +11,10 @@ class items:
 		parameter = self.parameter
 
 		if self.i_type == 0:
-			parameter['attack'] += 2
+			parameter['attack'] += 3
 			play_audio("error")
 		if self.i_type == 1:
-			parameter['defence'] += 2
+			parameter['defence'] += 3
 			play_audio("error")
 		if self.i_type == 2:
 			parameter['agility'] += 1

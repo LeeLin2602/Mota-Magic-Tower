@@ -2,11 +2,16 @@ class NPC():
 	def __init__(self, arg):
 		self.count = 0
 	def trigger(self):
-		key = self.conversation_control.print_word("商人","又有人來送死了啊！哈哈！", 'npc_2')
-		key = self.conversation_control.print_word("商人","你想要兩顆紅寶石嗎？就賣你 40 塊錢", 'npc_2', prompt = "（Ｙ／Ｎ）", keys = [ord('y'), ord('n')])
 
-		if key == ord('y') and self.status.cost("money", 40):
-			self.status.cost("attack", -4)
-			self.status.expire()
-		elif key == ord('y'):
-			self.conversation_control.print_word("商人","你沒有足夠的錢！" , 'npc_2')
+		if 'trader_f1_buy' not in self.parameter['variables']:
+
+			key = self.conversation_control.print_word("商人","我這有一顆紅寶石，就賣你 15 塊錢", 'npc_2', prompt = "（Ｙ／Ｎ）", keys = [ord('y'), ord('n')])
+
+			if key == ord('y') and self.status.cost("money", 15):
+				self.status.cost("attack", -3)
+				self.parameter['variables']["trader_f1_buy"] = True
+			elif key == ord('y'):
+				self.conversation_control.print_word("商人","你沒有足夠的錢！" , 'npc_2')
+		else:
+
+			key = self.conversation_control.print_word("商人","謝謝惠顧！我就祝你可以活久一點吧！哈哈哈～", 'npc_2')
