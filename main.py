@@ -67,8 +67,8 @@ parameter = {
 				'teleport_points': set(),
 				'level': 1,
 				'health': 1000,
-				'attack_method': atk_type.physic,
-				'attack': 850,
+				'attack_method': atk_type.double,
+				'attack': 10,
 				'defence': 10,
 				'agility': 1,
 				'money': 200,
@@ -112,11 +112,14 @@ class tools():
 
 			for i in range(min(len(monsters) - t, 2)):
 				if i + t < len(monsters):
-					damage = 99999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4])) - 1)
+					damage = 9999999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3] - parameter["defence"]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4]) / (2 if parameter['attack_method']==atk_type.double else (3 if parameter['attack_method']==atk_type.triple.triple else 1))) - 1)
 					
-					if monsters[t + i][6] == atk_type.double.value:
+					if monsters[t + i][6] == atk_type.magic.value:
+						damage = 9999999 if parameter['attack'] <= monsters[t + i][4] else max(0,monsters[t + i][3]) * (gauss(monsters[t + i][2] / (parameter['attack'] - monsters[t + i][4]) / (2 if parameter['attack_method']==atk_type.double else (3 if parameter['attack_method']==atk_type.triple.triple else 1)) - 1))
+
+					if damage != 9999999 and monsters[t + i][6] == atk_type.double.value:
 						damage *= 2
-					elif monsters[t + i][6] == atk_type.double.triple:
+					elif damage != 9999999 and monsters[t + i][6] == atk_type.double.triple.value:
 						damage *= 3
 
 					this_scenes.append(object(self.screen, "resources/怪物/" + monsters[t + i][1] + ",0.png" , 3, 5 * i + 3.5, dynamic = False, o_type = o_type.scene, multiple = 2))
@@ -655,7 +658,8 @@ class floor():
 					if type(scene_data) == dict and 'visible' in scene_data:
 							self.objects[-1].visible = scene_data['visible']
 
-					self.objects[-1].floor = self
+					if self.objects:
+						self.objects[-1].floor = self
 				
 	def blitme(self):
 		for i in self.objects:
