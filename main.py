@@ -74,7 +74,7 @@ parameter = {
 				'attack': 120,
 				'defence': 8,
 				'agility': 1,
-				'money': 1000,
+				'money': 0,
 				'0_key': 1,
 				'1_key': 1,
 				'2_key': 1,
@@ -172,15 +172,15 @@ class tools():
 		m = t.index(parameter['this_floor'])
 
 		while True:
-			key = conversation_control.print_word("","你要去 " + str(t[m]) + " 樓",keys = [ord('w'), ord('s'),ord('q'),ord("f"), 32])
+			key = conversation_control.print_word("","你要去 " + str(t[m]) + " 樓",keys = [pygame.K_UP,pygame.K_DOWN, ord('w'), ord('s'),ord('q'),ord("f"), 32],prompt = "（Q 退出）")
 			
-			if key == ord('w'):
+			if key == ord('w') or key == pygame.K_UP:
 				if m + 1 <= len(t) - 1:
 					m += 1
-			elif key == ord("s"):
+			elif key == ord("s") or key == pygame.K_DOWN:
 				if m - 1 >= 0:
 					m -= 1
-			elif key == 32: # ASCII(SPACE) = 32
+			elif key == 32 or key == ord("f"): # ASCII(SPACE) = 32
 				if t[m] >= parameter['this_floor']:
 					if "from_lower" in floors[t[m]].config:
 						play_audio("miss")
@@ -408,7 +408,7 @@ class conversation():
 		self.objects = []
 		self.queue = []
 	
-	def choice(self, path, text, choices, now_index = 0):
+	def choice(self, path, text, choices,prompt = "", now_index = 0):
 		global key_system
 
 		while True:
@@ -432,7 +432,11 @@ class conversation():
 
 			font = pygame.font.Font("resources/GenRyuMinTW_Regular.ttf", 14)
 
-			self.objects.append(text_object(self.screen, font.render("（上下鍵選擇、SPACE購買、Q離開）" , True , (255,255,255)), (8, 6.7)))
+			if prompt:
+				self.objects.append(text_object(self.screen, font.render("（上下鍵選擇、SPACE購買、Q離開）" , True , (255,255,255)), (8, 6.7)))
+			else:
+				self.objects.append(text_object(self.screen, font.render(prompt , True , (255,255,255)), (8, 6.7)))
+
 
 		
 			read_key = key_system.in_conversation([pygame.K_UP, pygame.K_DOWN, ord("q"), ord(" ")])
@@ -853,6 +857,7 @@ class item(object):
 		item_system.trigger(self.i_type)
 		warrior.vector = [0, 0, warrior.vector[2]]
 		return True
+
 class player(object):
 	def __init__(self, screen):
 		self.screen = screen
@@ -885,7 +890,7 @@ class player(object):
 			return
 
 		for i in objs:
-			if i.valid and i.location == [self.location[0] + self.vector[0], self.location[1] + self.vector[1]]:
+			if i.valid and self.vector[:2] != [0, 0] and i.location == [self.location[0] + self.vector[0], self.location[1] + self.vector[1]]:
 				if i.o_type == o_type.floor:
 					t = this_floor.floors[(self.location[0] + self.vector[0], self.location[1] + self.vector[1])]
 					jump(self.screen, t[0], t[1])

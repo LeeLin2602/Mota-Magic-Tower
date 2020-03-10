@@ -57,7 +57,7 @@ class items:
 			parameter['tools'].add("teleportation")
 			play_audio("get")
 			conversation_control.print_word("","- 得到飛天羅盤，按下 <F> 進行樓層跳躍 -")
-			conversation_control.print_word("","- （W 上樓/S 下樓/Q（或F）） 放棄/Space 傳送） -")
+			conversation_control.print_word("","- （W、S（上下鍵） 上樓/Q 放棄/Space（F） 傳送） -")
 		if self.i_type == 36:
 			parameter['level'] += 1
 			parameter['attack'] += 5
