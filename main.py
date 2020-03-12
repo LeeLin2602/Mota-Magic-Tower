@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 120,
+				'attack': 12,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -271,7 +271,7 @@ class fight():
 
 			if counter == 4:
 				if rnd() > (agl - parameter['agility'])/110:
-					if rnd() < (parameter['agility'] - agl)/110:
+					if rnd() < (parameter['agility'] - agl / 8)/110:
 						hpcost = max(parameter['attack'] - dfs, 0) * 2	
 
 						if parameter['sword'] != -1:
@@ -294,7 +294,7 @@ class fight():
 					hp -= hpcost
 						
 					if parameter["attack_method"] == atk_type.bloodsuck:
-						suckedBlood_amount += min(int(rnd() * 0.2 * hpcost * parameter['level'] / 10), hpcost * 0.8)
+						suckedBlood_amount += min(int(rnd() * 0.6 * hpcost * parameter['level'] / 10), hpcost * 0.8)
 						parameter['health'] += suckedBlood_amount
 						add_hp += suckedBlood_amount 
 
@@ -323,7 +323,7 @@ class fight():
 				if attack_type == atk_type.poisonous.value:
 					if rnd() < 0.2:
 						parameter['is_poisoning'] = True
-				if rnd() > (parameter['agility'] - agl)/110:
+				if rnd() > (parameter['agility'] - agl / 6)/110:
 					if rnd() < (dexterity - parameter['agility'])/110:
 
 						if attack_type == atk_type.magic.value:
@@ -332,12 +332,12 @@ class fight():
 							parameter['health'] -= max(atk - parameter['defence'], 0) * 2
 
 						if attack_type == atk_type.bloodsuck.value:
-							hp += int(max(atk - parameter['defence'], 0) * 0.4 * rnd())
+							hp += int(max(atk - parameter['defence'], 0) * 0.7 * rnd())
 						play_audio("critical_" + sound)
 						effects.append(effect(self.screen, "resources/攻擊/" + img + " %s.png", 11, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					else:
 						if attack_type == atk_type.bloodsuck.value:
-							hp += int(max(atk - parameter['defence'], 0) * 0.2 * rnd())
+							hp += int(max(atk - parameter['defence'], 0) * 0.35 * rnd())
 
 						if attack_type == atk_type.magic.value:
 							parameter['health'] -= max(atk, 0)
@@ -435,7 +435,7 @@ class conversation():
 			if prompt:
 				self.objects.append(text_object(self.screen, font.render("（上下鍵選擇、SPACE購買、Q離開）" , True , (255,255,255)), (8, 6.7)))
 			else:
-				self.objects.append(text_object(self.screen, font.render(prompt , True , (255,255,255)), (8, 6.7)))
+				self.objects.append(text_object(self.screen, font.render(str(prompt) , True , (255,255,255)), (8, 6.7)))
 
 
 		

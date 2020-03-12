@@ -37,7 +37,7 @@ class items:
 		if self.i_type == 18:
 			parameter['2_key'] += 1
 			play_audio("error")
-		if self.i_type == 19:
+		if self.i_type == 22:
 			parameter['0_key'] += 1
 			parameter['1_key'] += 1
 			parameter['2_key'] += 1
@@ -47,8 +47,8 @@ class items:
 			play_audio("get")
 			conversation_control.print_word("","- 得到怪物圖鑑，按下 <D> 查詢怪物訊息 -")
 		if self.i_type == 31:
-			parameter['money'] += 300
-			play_audio("money")
+			parameter['money'] += 150
+			play_audio("gold")
 		if self.i_type == 33:
 			play_audio("get")
 			conversation_control.print_word("","- 得到一把內鑲紅寶石的十字鎬 -")

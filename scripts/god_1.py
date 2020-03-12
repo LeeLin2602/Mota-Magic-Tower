@@ -8,7 +8,7 @@ class NPC():
 		key = 0
 
 		while True:
-			key = self.conversation_control.choice("resources/NPC/blue_god.png", "勇敢的勇者啊！我是力量之神！\n如果你給我 %s 元我可以給你帶來：" % self.parameter['variables']['price_1'], ["生命 800 點", "攻擊力 4 點", "防禦力 4 點", "放棄"], key)
+			key = self.conversation_control.choice("resources/NPC/blue_god.png", "勇敢的勇者啊！我是力量之神！\n如果你給我 %s 元我可以給你帶來：" % self.parameter['variables']['price_1'], ["生命 800 點", "攻擊力 4 點", "防禦力 4 點", "放棄"],"", key)
 			
 			if key == -1 or key == 3:
 				return
