@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 12,
+				'attack': 1200,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -518,6 +518,7 @@ class object():
 
 			self.script.conversation_control = conversation_control
 			self.script.__init__(self.script, arg)
+			self.script.play_audio = play_audio
 			self.script.parameter = parameter
 			self.script.status = self
 
@@ -584,6 +585,8 @@ class object():
 # game objects			
 class floor():
 	def __init__(self, screen, data):
+		global floors
+
 		self.scene = data["scene"]
 
 		if 'config' in data:
@@ -614,7 +617,7 @@ class floor():
 			self.script_before = None
 
 		self.this_floor = data['floor']
-		
+		self.whole_tower = floors
 
 		self.objects 	= []
 
@@ -1004,7 +1007,7 @@ class key_event():
 		global this_floor, grounds, information, scenes, warrior, parameter
 		global conversation_control
 
-		k = 0
+
 		while conversation_control.in_conversation:
 
 			information = (produce_number(screen, str(parameter['level']), -2.1, 1) + 
@@ -1037,13 +1040,10 @@ class key_event():
 						pygame.event.clear()
 						play_audio("error")
 						return event.key
-			if k == 1:
-				update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
-				k = 0
-			else:
-				update_screen(self.screen, information + conversation_control.objects)
-				k += 1
-			time.sleep(0.016125)
+
+			update_screen(self.screen, grounds + scenes + information + this_floor.objects + [warrior] + conversation_control.objects)
+
+			time.sleep(0.0325)
 def produce_number(screen, number,x ,y):
 	c = []
 	for i,j in enumerate(number):

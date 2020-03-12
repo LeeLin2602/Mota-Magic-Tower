@@ -48,7 +48,7 @@ class items:
 			conversation_control.print_word("","- 得到怪物圖鑑，按下 <D> 查詢怪物訊息 -")
 		if self.i_type == 31:
 			parameter['money'] += 150
-			play_audio("gold")
+			
 		if self.i_type == 33:
 			play_audio("get")
 			conversation_control.print_word("","- 得到一把內鑲紅寶石的十字鎬 -")

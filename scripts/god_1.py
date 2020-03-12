@@ -23,6 +23,7 @@ class NPC():
 					self.cost("defence", -4)
 
 				self.parameter['variables']['price_1'] += 1
-
+				self.play_audio("gold")
 			else:
 				self.conversation_control.print_word("力量之神","你並沒有足夠的錢。", 'blue_god')
+				self.play_audio("error")
