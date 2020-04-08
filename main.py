@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 1200,
+				'attack': 120,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -510,17 +510,26 @@ class object():
 	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None, script_before = None):
 		# RPG system
 
+		global conversation_control, parameter
+		
 		self.script = script
 		self.script_before = script_before
 
 		if script != None:
-			global conversation_control, parameter
 
 			self.script.conversation_control = conversation_control
 			self.script.__init__(self.script, arg)
 			self.script.play_audio = play_audio
 			self.script.parameter = parameter
 			self.script.status = self
+
+		if script_before != None:
+
+			self.script_before.conversation_control = conversation_control
+			self.script_before.__init__(self.script_before, arg)
+			self.script_before.play_audio = play_audio
+			self.script_before.parameter = parameter
+			self.script_before.status = self
 
 		# Initialize on canvas and map
 		self.screen = screen
@@ -588,6 +597,9 @@ class floor():
 		global floors
 
 		self.scene = data["scene"]
+		self.screen = screen
+		self.object_type = object
+		self.o_type = o_type
 
 		if 'config' in data:
 			self.config = data['config']
@@ -603,19 +615,22 @@ class floor():
 			self.bgm = ""
 
 		if "program" in data:
-			module = __import__("scripts." + scene_data['program'])
-			script = eval("module." + scene_data['program'] + ".trigger")
-			self.script = script
+			module = __import__("scripts." + data['program'])
+			script = eval("module." + data['program'] + ".trigger")
+			self.script = script()
+			self.script.status = self
 		else:
 			self.script = None
 
 		if "program_before" in data:
-			module = __import__("scripts." + scene_data['program_before'])
-			script = eval("module." + scene_data['program_before'] + ".trigger")
-			self.script_before = script
+			module = __import__("scripts." + data['program_before'])
+			script = eval("module." + data['program_before'] + ".trigger")
+			self.script_before = script()
+			self.script_before.status = self
 		else:
 			self.script_before = None
 
+		self.ever_arrived = False
 		self.this_floor = data['floor']
 		self.whole_tower = floors
 
@@ -725,6 +740,7 @@ class floor():
 	def blitme(self):
 		for i in self.objects:
 			i.blitme()
+
 class effect(object):
 	def blitme(self):
 		if self.visible:
@@ -932,8 +948,11 @@ def jump(screen, destination, location):
 	if this_floor.script:
 		this_floor.script.trigger()
 
-	if floors[destination].script_before:
+	if not this_floor.ever_arrived and this_floor.script_before:
 		floors[destination].script_before.trigger()
+		
+	this_floor.ever_arrived = True
+
 def cost(item, amount, voice = True):
 	if parameter[item] >= amount:
 		parameter[item] -= amount
@@ -1125,7 +1144,7 @@ f = json.load(open("data/floors_data.json", encoding="utf-8"))
 for i in f['floors']:
 	floors[i['floor']] = floor(screen, i)
 
-this_floor = floors[f["start"]]
+this_floor = floors[4]#floors[f["start"]]
 parameter['teleport_points'].add(f['start'])
 
 play_bgm(this_floor.bgm)
