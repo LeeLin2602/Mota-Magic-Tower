@@ -79,8 +79,16 @@ class trigger():
 				maze_map[i][j] = 1
 
 		create_maze(m, n, maze_map)
+		
+		num = 4
+
+		maze_map[-2][-2] = 1
 
 		for i in range(13):
 			for j in range(13):
 				if maze_map[i][j] == 0:
 					this_floor.objects.append(this_floor.object_type(this_floor.screen, "resources/地形/wall 2.png", j + 1, i + 1 , o_type = this_floor.o_type.wall))
+				else:
+					if (i, j) != (0, 0) and num and randint(1,8) == 1:
+						this_floor.objects.append(this_floor.monster_type(this_floor.screen, "resources/怪物/24,%s.png", j + 1, i + 1, dynamic = True, o_type = this_floor.o_type.monster, arg = {'m_type': 24, "showed": True}))
+						num -= 1

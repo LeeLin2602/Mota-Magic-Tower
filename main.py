@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 120,
+				'attack': 12000,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -599,6 +599,7 @@ class floor():
 		self.scene = data["scene"]
 		self.screen = screen
 		self.object_type = object
+		self.monster_type = monster
 		self.o_type = o_type
 
 		if 'config' in data:
@@ -950,7 +951,7 @@ def jump(screen, destination, location):
 
 	if not this_floor.ever_arrived and this_floor.script_before:
 		floors[destination].script_before.trigger()
-		
+
 	this_floor.ever_arrived = True
 
 def cost(item, amount, voice = True):
@@ -1144,7 +1145,7 @@ f = json.load(open("data/floors_data.json", encoding="utf-8"))
 for i in f['floors']:
 	floors[i['floor']] = floor(screen, i)
 
-this_floor = floors[4]#floors[f["start"]]
+this_floor = floors[f["start"]]
 parameter['teleport_points'].add(f['start'])
 
 play_bgm(this_floor.bgm)
