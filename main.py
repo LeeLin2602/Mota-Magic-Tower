@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 12000,
+				'attack': 12,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -505,7 +505,7 @@ class text_object():
 		self.location = location
 		self.screen = screen
 	def blitme(self):
-		self.screen.blit(self.text, (self.location[0] * 48 + 336, self.location[1] * 48 + 96))
+		self.screen.blit(self.text, (int(self.location[0] * 48 + 336), int(self.location[1] * 48 + 96)))
 class object(): 
 	def __init__(self, screen, path, x , y,dynamic = False, o_type = o_type.ground, multiple = 1.5, arg = {}, script = None, floor = None, script_before = None):
 		# RPG system
@@ -570,8 +570,8 @@ class object():
 
 	def blitme(self):
 		if self.visible:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
-			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
+			self.rect.centerx = int(self.location[0] * 48 + 336 - self.rect.width // 2)
+			self.rect.bottom = int(self.location[1] * 48 + 96 - self.rect.height)
 			if self.dynamic:
 				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
 
@@ -745,7 +745,7 @@ class floor():
 class effect(object):
 	def blitme(self):
 		if self.visible:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width // 2
 			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
 			if self.dynamic:
 				image = pygame.transform.scale(pygame.image.load(self.path % self.counter),(self.rect.width, self.rect.height))
@@ -847,7 +847,7 @@ class door(object):
 
 	def blitme(self):
 		if self.visible and not self.is_open:
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width // 2
 			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
 
 			self.screen.blit(self.image, self.rect)
@@ -862,7 +862,7 @@ class door(object):
 			self.image = pygame.transform.scale(self.image, (int(self.rect.width * 1.5), int(self.rect.height * 1.5)))
 			self.rect = self.image.get_rect()
 
-			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width / 2
+			self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width // 2
 			self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
 
 			self.screen.blit(self.image, self.rect)
@@ -896,7 +896,7 @@ class player(object):
 		self.speed = 3
 
 	def blitme(self):
-		self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width/2
+		self.rect.centerx = self.location[0] * 48 + 336 - self.rect.width// 2
 		self.rect.bottom = self.location[1] * 48 + 96 - self.rect.height
 
 		self.screen.blit(self.images[self.vector[2]][self.counter], self.rect)
@@ -1078,12 +1078,14 @@ def play_bgm(path = ""):
 	else:
 		audio_player.Channel(0).stop()
 def play_audio(path):
+
 	global audio_player
 
 	for i in range(1, 10):
 		if not audio_player.Channel(i).get_busy():
 			audio_player.Channel(i).play(audio_player.Sound("resources/音效/" + path + ".ogg"))
 			return
+			
 def update_screen(screen, objects):
 	for i in objects:
 		i.blitme()
@@ -1091,6 +1093,7 @@ def update_screen(screen, objects):
 
 
 pygame.init()
+
 pygame.mixer.init()
 
 screen  = pygame.display.set_mode((int(576 * 1.5 + 144), int(480 * 1.5)))
