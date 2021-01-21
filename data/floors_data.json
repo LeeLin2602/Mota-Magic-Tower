@@ -32,18 +32,18 @@
 		"bgm":"bgm1",
 		"scene": [
 			[{"o_type":4,"goto":0,"img":5, "location":[7,1]},2, 1049, 1004, 1005, 2, 2, 2, 2, 2, 2, 2, 2], 
-			[0, 2, 1000, 1000, 0, 2, 0, {"o_type":2 ,"m_type":2021, "tag": 4, "program":"f2door"}, 2, {"o_type":2 ,"m_type":2041, "tag": 12}, {"o_type":2 ,"m_type":2042, "tag": 13}, {"o_type":2 ,"m_type":2043, "tag": 16}, 2], 
-			[2008, 2, 1001, 0, 0, {"o_type":6 ,"d_type":4, "tag": 6, "program":"doorOpen"}, 0, 0, {"o_type":6,"d_type":3, "tag": 6}, {"o_type":2 ,"m_type":2041, "tag": 10}, {"o_type": 3, "name":"尼古拉", "npc_type":"尼古拉", "program":"nicolas_2f"}, {"o_type":2 ,"m_type":2043, "tag": 17}, 2], 
-			[2009, 2, 1001, 0, 1002, 2, 0, {"o_type":2 ,"m_type":2021, "tag": 5, "program":"f2door"}, 2, {"o_type":2 ,"m_type":2041, "tag": 11}, {"o_type":2 ,"m_type":2042, "tag": 14}, {"o_type":2 ,"m_type":2043, "tag": 15}, 2], 
+			[0, 2, 1000, 1000, 0, 2, 0, {"o_type":2 ,"m_type":2021, "tag": 4, "program":"f2door"}, 2, {"o_type":2 ,"m_type":2040, "tag": 12}, {"o_type":2 ,"m_type":2042, "tag": 13}, {"o_type":2 ,"m_type":2043, "tag": 16}, 2], 
+			[2008, 2, 1001, 0, 0, {"o_type":6 ,"d_type":4, "tag": 6, "program":"doorOpen"}, 0, 0, {"o_type":6,"d_type":3, "tag": 6}, {"o_type":2 ,"m_type":2040, "tag": 10}, {"o_type": 3, "name":"尼古拉", "npc_type":"尼古拉", "program":"nicolas_2f"}, {"o_type":2 ,"m_type":2043, "tag": 17}, 2], 
+			[2009, 2, 1001, 0, 1002, 2, 0, {"o_type":2 ,"m_type":2021, "tag": 5, "program":"f2door"}, 2, {"o_type":2 ,"m_type":2040, "tag": 11}, {"o_type":2 ,"m_type":2042, "tag": 14}, {"o_type":2 ,"m_type":2043, "tag": 15}, 2], 
 			[2008, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2], 
 			[0, {"o_type":2 ,"m_type":2020, "tag": 0, "program":"f2door2"}, 2, 0, 0, 2, 0, 2, 0, 0, 0, 2, 2], 
 			[0, 0, {"o_type":6,"d_type":3, "tag": 2}, 0, 0, 0, 0, {"o_type":6 ,"d_type":4, "program":"doorOpen"},  0, 0, 0, {"o_type": 3, "name":"盜賊", "npc_type":3, "program":"thief_2f"}, 2], 
 			[0, {"o_type":2 ,"m_type":2020, "tag": 1, "program":"f2door2"}, 2, 0, 0, 2, 0, 2, 0, 0, 0, 2, 2], 
 			[0, 2, 2, 2, 2, 2, 0, 2, 2, 2, 2, 2, 2], 
-			[2008, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-			[2009, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-			[2008, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-			[{"o_type":4,"goto":2,"img":4, "location":[1,13]}, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			[2008, 2, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 2], 
+			[2009, 2, {"o_type": 3,"name":"工匠","npc_type": 2,"program": "artisan_2f"}, 0, 0, {"o_type":6 ,"d_type":4, "tag": 6, "program":"doorOpen"}, 0, 0, 0, 0, 0, 0, 2], 
+			[2008, 2, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 2], 
+			[{"o_type":4,"goto":2,"img":4, "location":[1,13]}, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 		],
 		"config": {
 				"allow_teleport_to": true,

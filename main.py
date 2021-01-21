@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 12,
+				'attack': 90,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
@@ -82,7 +82,9 @@ parameter = {
 				'shield': -1,
 				'is_poisoning': False,
 				'tools': set(),
-				'variables': {} }
+				'variables': {
+				}
+			}
 
 # game_system
 class tools():
@@ -129,6 +131,9 @@ class tools():
 						damage *= 2
 					elif damage != 9999999 and monsters[t + i][6] == atk_type.double.triple.value:
 						damage *= 3
+
+					if monsters[t + i][6] == atk_type.bloodsuck.value and "artisan_49" in self.parameter['variables']:
+						damage = (monsters[t + i][3] - parameter['defence']) * (gauss(monsters[t + i][2] / int(parameter['attack'] - monsters[t + i][4] * 1.5 * (2 if parameter['attack_method'] == atk_type.double else (3 if parameter['attack_method'] == atk_type.triple else 1)))) - 1)
 
 					this_scenes.append(object(self.screen, "resources/怪物/" + monsters[t + i][1] + ",0.png" , 3, 5 * i + 3.5, dynamic = False, o_type = o_type.scene, multiple = 2))
 					this_scenes.append(text_object(self.screen, font.render(monsters[t + i][0] , True , (255,255,255)), (3.5, 5.2 * i + 0.25)))
@@ -291,6 +296,9 @@ class fight():
 							play_audio("hit")
 							effects.append(effect(self.screen, "resources/攻擊/hit %s.png", 4, 6, dynamic = True, o_type = o_type.effect, multiple = 1))
 					
+					if attack_type == atk_type.bloodsuck.value and "artisan_49" in self.parameter['variables']:
+						hpcost = int(hpcost * 1.5)
+
 					hp -= hpcost
 						
 					if parameter["attack_method"] == atk_type.bloodsuck:
