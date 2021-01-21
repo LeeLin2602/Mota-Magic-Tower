@@ -71,7 +71,7 @@ parameter = {
 				'level': 1,
 				'health': 1000,
 				'attack_method': atk_type.physic,
-				'attack': 90,
+				'attack': 12,
 				'defence': 8,
 				'agility': 1,
 				'money': 0,
